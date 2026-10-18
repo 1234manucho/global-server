@@ -17,7 +17,6 @@ app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'default-secret-key')
 # ==========================================
 db_url = os.getenv('DATABASE_URL', 'postgresql://visa_yqla_user:DYguQGdSGspIDSeeQ5IrV6TjmOPkABd2@dpg-dba428fbtjjs73dn2tn0-a/visa_yqla')
 
-# Render uses 'postgres://' but SQLAlchemy requires 'postgresql+psycopg2://'
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql+psycopg2://", 1)
 elif db_url.startswith("postgresql://"):
@@ -28,7 +27,6 @@ app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 # ==========================================
 # --- FILE UPLOAD CONFIGURATION ---
 # ==========================================
-# Save uploads to the persistent disk mounted at /var/data
 DATA_DIR = '/var/data' if os.path.exists('/var/data') else os.getcwd()
 app.config['UPLOAD_FOLDER'] = os.path.join(DATA_DIR, 'uploads')
 
@@ -83,7 +81,6 @@ def card_management():
 def login():
     if request.method == 'POST':
         card = request.form.get('card_number').replace(" ", "")
-        # Fetch the most recent file assigned to this card
         record = FileRecord.query.filter_by(card_number=card).order_by(FileRecord.id.desc()).first()
         if record:
             session['user_card'] = card
@@ -96,13 +93,11 @@ def dashboard():
     if 'user_card' not in session:
         return redirect(url_for('login'))
     
-    # Fetch the most recent file for this card
     record = FileRecord.query.filter_by(card_number=session['user_card']).order_by(FileRecord.id.desc()).first()
     if not record:
         session.pop('user_card', None)
         return redirect(url_for('login'))
     
-    # Auto-complete if the 5-10 hour conversion timer has passed
     if record.status == "CONVERTING" and record.conversion_end and datetime.utcnow() > record.conversion_end:
         record.status = "COMPLETED"
         db.session.commit()
@@ -242,7 +237,6 @@ def confirm_payment(id):
     record = FileRecord.query.get(id)
     
     if record.status == "AWAITING_SERVER":
-        # Randomly select 5 to 10 hours for the conversion process
         processing_hours = random.randint(5, 10)
         
         record.status = "CONVERTING"
@@ -267,6 +261,28 @@ def force_complete(id):
     db.session.commit()
     flash("Transaction marked as COMPLETED successfully.", "success")
     
+    return redirect(url_for('admin'))
+
+@app.route('/admin/delete/<int:id>', methods=['POST'])
+def delete_record(id):
+    if not session.get('admin_logged_in'): 
+        return redirect(url_for('admin_login'))
+    
+    record = FileRecord.query.get_or_404(id)
+    
+    # 1. Delete the physical file from the persistent disk
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], record.filename)
+    if os.path.exists(file_path):
+        try:
+            os.remove(file_path)
+        except Exception as e:
+            print(f"Error deleting file: {e}")
+            
+    # 2. Delete the record from the database
+    db.session.delete(record)
+    db.session.commit()
+    
+    flash(f"Transaction {record.filename} and its associated file were deleted.", "success")
     return redirect(url_for('admin'))
 
 if __name__ == '__main__':
