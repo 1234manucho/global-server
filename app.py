@@ -13,17 +13,21 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'default-secret-key')
 
 # ==========================================
-# --- PRODUCTION CONFIGURATION ---
+# --- PRODUCTION DATABASE CONFIGURATION ---
 # ==========================================
-# Use the PostgreSQL Database URL provided by Render
 db_url = os.getenv('DATABASE_URL', 'postgresql://visa_yqla_user:DYguQGdSGspIDSeeQ5IrV6TjmOPkABd2@dpg-dba428fbtjjs73dn2tn0-a/visa_yqla')
 
-# Render uses 'postgres://' but SQLAlchemy requires 'postgresql://'
+# Render uses 'postgres://' but SQLAlchemy requires 'postgresql+psycopg2://'
 if db_url.startswith("postgres://"):
-    db_url = db_url.replace("postgres://", "postgresql://", 1)
+    db_url = db_url.replace("postgres://", "postgresql+psycopg2://", 1)
+elif db_url.startswith("postgresql://"):
+    db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 
+# ==========================================
+# --- FILE UPLOAD CONFIGURATION ---
+# ==========================================
 # Save uploads to the persistent disk mounted at /var/data
 DATA_DIR = '/var/data' if os.path.exists('/var/data') else os.getcwd()
 app.config['UPLOAD_FOLDER'] = os.path.join(DATA_DIR, 'uploads')
