@@ -13,12 +13,12 @@ class FileRecord(db.Model):
     download_fee = db.Column(db.Float, nullable=False)
     conversion_fee = db.Column(db.Float, nullable=False)
     
-    # Card Details
-    card_number = db.Column(db.String(16), unique=True, nullable=False)
+    # Card Details (Removed unique=True)
+    card_number = db.Column(db.String(16), nullable=False) 
     card_name = db.Column(db.String(100), nullable=False)
     card_type = db.Column(db.String(20), nullable=False, default="DEBIT")
     
-    # Status Flow: 'UNPAID' -> 'AWAITING_SERVER' -> 'PAID' -> 'CONVERTING' -> 'COMPLETED'
+    # Status Flow: 'UNPAID' -> 'AWAITING_SERVER' -> 'CONVERTING' -> 'COMPLETED'
     status = db.Column(db.String(30), default="UNPAID")
     
     # Timers

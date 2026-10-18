@@ -11,10 +11,24 @@ load_dotenv()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'default-secret-key')
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///visa_simulator.db'
-app.config['UPLOAD_FOLDER'] = 'static/uploads'
-db.init_app(app)
 
+# ==========================================
+# --- PRODUCTION CONFIGURATION ---
+# ==========================================
+# Use the PostgreSQL Database URL provided by Render
+db_url = os.getenv('DATABASE_URL', 'postgresql://visa_yqla_user:DYguQGdSGspIDSeeQ5IrV6TjmOPkABd2@dpg-dba428fbtjjs73dn2tn0-a/visa_yqla')
+
+# Render uses 'postgres://' but SQLAlchemy requires 'postgresql://'
+if db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+
+# Save uploads to the persistent disk mounted at /var/data
+DATA_DIR = '/var/data' if os.path.exists('/var/data') else os.getcwd()
+app.config['UPLOAD_FOLDER'] = os.path.join(DATA_DIR, 'uploads')
+
+db.init_app(app)
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 with app.app_context():
@@ -65,7 +79,8 @@ def card_management():
 def login():
     if request.method == 'POST':
         card = request.form.get('card_number').replace(" ", "")
-        record = FileRecord.query.filter_by(card_number=card).first()
+        # Fetch the most recent file assigned to this card
+        record = FileRecord.query.filter_by(card_number=card).order_by(FileRecord.id.desc()).first()
         if record:
             session['user_card'] = card
             return redirect(url_for('dashboard'))
@@ -77,7 +92,8 @@ def dashboard():
     if 'user_card' not in session:
         return redirect(url_for('login'))
     
-    record = FileRecord.query.filter_by(card_number=session['user_card']).first()
+    # Fetch the most recent file for this card
+    record = FileRecord.query.filter_by(card_number=session['user_card']).order_by(FileRecord.id.desc()).first()
     if not record:
         session.pop('user_card', None)
         return redirect(url_for('login'))
@@ -93,7 +109,7 @@ def dashboard():
 @app.route('/user_confirm_payment', methods=['POST'])
 def user_confirm_payment():
     if 'user_card' not in session: return redirect(url_for('login'))
-    record = FileRecord.query.filter_by(card_number=session['user_card']).first()
+    record = FileRecord.query.filter_by(card_number=session['user_card']).order_by(FileRecord.id.desc()).first()
     
     if record.status == "UNPAID":
         record.status = "AWAITING_SERVER"
@@ -105,7 +121,7 @@ def user_confirm_payment():
 @app.route('/receipt')
 def receipt():
     if 'user_card' not in session: return redirect(url_for('login'))
-    record = FileRecord.query.filter_by(card_number=session['user_card']).first()
+    record = FileRecord.query.filter_by(card_number=session['user_card']).order_by(FileRecord.id.desc()).first()
     
     if record.status not in ['CONVERTING', 'COMPLETED']:
         flash("Receipt is not available yet. Payment must be verified first.", "error")
@@ -117,7 +133,7 @@ def receipt():
 @app.route('/download')
 def download():
     if 'user_card' not in session: return redirect(url_for('login'))
-    record = FileRecord.query.filter_by(card_number=session['user_card']).first()
+    record = FileRecord.query.filter_by(card_number=session['user_card']).order_by(FileRecord.id.desc()).first()
     
     if record.status == "COMPLETED":
         output_filename = f"MT103_ACK_{record.id}.json"
@@ -186,19 +202,23 @@ def admin():
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             
-            new_record = FileRecord(
-                filename=filename, 
-                file_path=filename,
-                amount_usd=float(request.form['amount']),
-                download_fee=float(request.form['d_fee']),
-                conversion_fee=float(request.form['c_fee']),
-                card_number=request.form['card'].replace(" ", ""),
-                card_name=request.form['card_name'],
-                card_type=request.form['card_type']
-            )
-            db.session.add(new_record)
-            db.session.commit()
-            flash("File Uploaded and Card Assigned.", "success")
+            try:
+                new_record = FileRecord(
+                    filename=filename, 
+                    file_path=filename,
+                    amount_usd=float(request.form['amount']),
+                    download_fee=float(request.form['d_fee']),
+                    conversion_fee=float(request.form['c_fee']),
+                    card_number=request.form['card'].replace(" ", ""),
+                    card_name=request.form['card_name'],
+                    card_type=request.form['card_type']
+                )
+                db.session.add(new_record)
+                db.session.commit()
+                flash("File Uploaded and Card Assigned.", "success")
+            except Exception as e:
+                db.session.rollback()
+                flash(f"Database Error: {str(e)}", "error")
 
     records = FileRecord.query.order_by(FileRecord.id.desc()).all()
     return render_template('admin.html', records=records)
