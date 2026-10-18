@@ -1,0 +1,67 @@
+{
+    "swift_header": {
+        "message_type": "MT103",
+        "sender_bic": "VISAUS33XXX",
+        "receiver_bic": "KCOOKENAXXX",
+        "session_number": "2026-1-8233",
+        "priority": "NORMAL",
+        "delivery_status": "NETWORK ACK"
+    },
+    "message_text": {
+        "F20": {
+            "tag": "Transaction Reference Number",
+            "value": "GSB-1-VISA-2026"
+        },
+        "F23B": {
+            "tag": "Bank Operation Code",
+            "value": "CRED"
+        },
+        "F32A": {
+            "tag": "Value Date / Settled Date",
+            "date": "2026/10/17",
+            "currency": "USD",
+            "amount": "10,000,000.00"
+        },
+        "F50A": {
+            "tag": "Ordering Customer",
+            "account_name": "JOHN DOE",
+            "account_number": "5529310009916572"
+        },
+        "F52A": {
+            "tag": "Ordering Institution",
+            "bank_name": "VISA GLOBAL SERVER",
+            "swift_bic": "VISAUS33XXX"
+        },
+        "F57A": {
+            "tag": "Beneficiary Bank",
+            "bank_name": "THE CO-OPERATIVE BANK OF KENYA LTD.",
+            "swift_bic": "KCOOKENA",
+            "address": "NG'ONG ROAD, P.O. BOX 48231-00100, NAIROBI, KENYA"
+        },
+        "F59": {
+            "tag": "Beneficiary Customer",
+            "account_name": "JUAN FX TRADERS LIMITED",
+            "account_number": "01102085712001",
+            "details": "MAYFAIR SUITES, GITANGA ROAD, KILELESHWA, KENYA"
+        },
+        "F70": {
+            "tag": "Remittance Information",
+            "value": "CARD INFORMATION VERIFIED. FILE: FABS-KWS-Integration-Concept-Note.pdf"
+        },
+        "F71A": {
+            "tag": "Details of Charges",
+            "value": "OUR"
+        },
+        "F72": {
+            "tag": "Sender to Receiver Information",
+            "value": "// SERVICE PROTOCOL: 103 / OPEN // STATUS TRANSACTION : VALID / ACTIVATED / COMPLETED"
+        }
+    },
+    "message_trailer": {
+        "checksum": "CHK: KCOOKENAXXX 457232",
+        "mac": "MAC-711770180407",
+        "end_of_message": "OK",
+        "transmission": "END OF TRANSMISSION",
+        "creation_time": "2026/10/17 - 09:28:54"
+    }
+}

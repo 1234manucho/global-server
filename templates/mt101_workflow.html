@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-6">
+    <h1 class="text-2xl font-bold text-white border-b border-gray-700 pb-2">MT101.1 to MT103 Conversion Workflow</h1>
+    
+    <div class="bg-[#111b2e] border border-gray-700 p-8 rounded shadow-lg">
+        <div class="relative">
+            <!-- Connecting Line -->
+            <div class="absolute top-1/2 left-0 w-full h-1 bg-gray-700 -translate-y-1/2 z-0"></div>
+            
+            <!-- Steps -->
+            <div class="relative z-10 flex justify-between items-center text-center">
+                
+                <!-- Step 1 -->
+                <div class="flex flex-col items-center w-1/5">
+                    <div class="w-12 h-12 rounded-full bg-[#1d4ed8] flex items-center justify-center text-white font-bold text-lg shadow-[0_0_15px_rgba(29,78,216,0.5)]">1</div>
+                    <h3 class="text-white font-semibold mt-4 text-sm">File Assignment</h3>
+                    <p class="text-xs text-gray-400 mt-1">Admin uploads file & assigns Card Number.</p>
+                </div>
+
+                <!-- Step 2 -->
+                <div class="flex flex-col items-center w-1/5">
+                    <div class="w-12 h-12 rounded-full bg-[#1e293b] border-2 border-blue-500 flex items-center justify-center text-blue-400 font-bold text-lg">2</div>
+                    <h3 class="text-white font-semibold mt-4 text-sm">Wallet Payment</h3>
+                    <p class="text-xs text-gray-400 mt-1">User connects wallet & pays fees via USDT.</p>
+                </div>
+
+                <!-- Step 3 -->
+                <div class="flex flex-col items-center w-1/5">
+                    <div class="w-12 h-12 rounded-full bg-[#1e293b] border-2 border-orange-500 flex items-center justify-center text-orange-400 font-bold text-lg">3</div>
+                    <h3 class="text-white font-semibold mt-4 text-sm">Server Verification</h3>
+                    <p class="text-xs text-gray-400 mt-1">Admin verifies blockchain hash & approves.</p>
+                </div>
+
+                <!-- Step 4 -->
+                <div class="flex flex-col items-center w-1/5">
+                    <div class="w-12 h-12 rounded-full bg-[#1e293b] border-2 border-yellow-500 flex items-center justify-center text-yellow-400 font-bold text-lg">4</div>
+                    <h3 class="text-white font-semibold mt-4 text-sm">MT103 Conversion</h3>
+                    <p class="text-xs text-gray-400 mt-1">Server locks user out for 5-6 hours processing.</p>
+                </div>
+
+                <!-- Step 5 -->
+                <div class="flex flex-col items-center w-1/5">
+                    <div class="w-12 h-12 rounded-full bg-[#1e293b] border-2 border-green-500 flex items-center justify-center text-green-400 font-bold text-lg">5</div>
+                    <h3 class="text-white font-semibold mt-4 text-sm">Settlement</h3>
+                    <p class="text-xs text-gray-400 mt-1">User downloads MT103 file & printable receipt.</p>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Technical Details -->
+    <div class="bg-[#111b2e] border border-gray-700 p-6 rounded shadow-lg">
+        <h2 class="text-lg text-white font-semibold mb-4 border-b border-gray-700 pb-2">Protocol Information</h2>
+        <div class="grid grid-cols-2 gap-6 text-sm">
+            <div>
+                <p class="text-gray-400 mb-2"><strong class="text-white">MT101.1:</strong> Request for Transfer. Used by corporates to request a bank to execute a payment order.</p>
+                <p class="text-gray-400"><strong class="text-white">MT103:</strong> Single Customer Credit Transfer. The actual proof of payment sent via the SWIFT network.</p>
+            </div>
+            <div class="bg-[#0a1226] p-4 rounded border border-gray-700 font-mono text-xs text-gray-300">
+                <p>:20:TRN-2026-7843</p>
+                <p>:23B:CRED</p>
+                <p>:32A:261015USD1000000,00</p>
+                <p>:50K:/5529310009916572</p>
+                <p>LAUREANO SANCHEZ GALLEGO</p>
+                <p>:59:/VISA GLOBAL SERVER</p>
+                <p>:71A:SHA</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

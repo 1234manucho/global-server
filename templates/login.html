@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login - VISA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-[#0b1120] flex items-center justify-center h-screen text-white">
+    <div class="bg-[#111b2e] border border-gray-700 p-8 rounded-lg shadow-xl w-96">
+        <div class="text-center mb-8">
+            <!-- Custom VISA Logo -->
+            <img src="{{ url_for('static', filename='images/visa.png') }}" alt="VISA Logo" class="h-12 mx-auto object-contain mb-2">
+            <p class="text-blue-400 text-sm mt-2">Global Server Access</p>
+        </div>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}{% for c, m in messages %}
+                <div class="bg-red-900 text-white p-2 mb-4 text-sm rounded text-center border border-red-600">{{ m }}</div>
+            {% endfor %}{% endif %}
+        {% endwith %}
+        <form method="POST">
+            <label class="block text-xs text-gray-400 mb-2">ENTER ASSIGNED CARD NUMBER</label>
+            <input type="text" name="card_number" placeholder="5529 3100 0991 6572" class="w-full bg-[#0a1226] border border-gray-600 p-3 rounded text-white font-mono mb-6 focus:border-blue-500 outline-none" required>
+            <button type="submit" class="w-full bg-[#1d4ed8] hover:bg-blue-600 py-3 rounded font-bold transition">SECURE LOGIN</button>
+        </form>
+        <div class="mt-6 text-center">
+            <a href="/admin/login" class="text-xs text-gray-500 hover:text-white transition">Administrator Login</a>
+        </div>
+    </div>
+</body>
+</html>

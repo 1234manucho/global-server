@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Payment Receipt - VISA Global Server</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @media print {
+            body { -webkit-print-color-adjust: exact; background: white; padding: 0; }
+            .no-print { display: none; }
+            .print-shadow { box-shadow: none !important; border: none !important; }
+            .page-break { page-break-after: always; }
+        }
+    </style>
+</head>
+<body class="bg-gray-200 flex items-center justify-center min-h-screen p-8 font-sans">
+
+    <div class="bg-white w-full max-w-3xl p-10 rounded-lg shadow-2xl print-shadow relative overflow-hidden">
+        
+        <!-- Watermark Background -->
+        <div class="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none">
+            <img src="{{ url_for('static', filename='images/visa.png') }}" alt="VISA" class="w-[500px]">
+        </div>
+
+        <!-- Top Header -->
+        <div class="flex justify-between items-start border-b-2 border-gray-800 pb-6 mb-6 relative z-10">
+            <div>
+                <img src="{{ url_for('static', filename='images/visa.png') }}" alt="VISA Logo" class="h-14 object-contain mb-2">
+                <p class="text-xs text-gray-500 font-bold tracking-widest uppercase">Global Server Payment Gateway</p>
+            </div>
+            <div class="text-right">
+                <h1 class="text-3xl font-bold text-gray-800 tracking-tight">PAYMENT RECEIPT</h1>
+                <p class="text-sm text-gray-600 mt-1">Receipt No: <strong class="text-gray-900">VISA-{{ file.id }}-2026</strong></p>
+                <p class="text-sm text-gray-600">Date: <strong>{{ file.payment_time.strftime('%B %d, %Y - %H:%M') if file.payment_time else 'N/A' }} UTC</strong></p>
+                <span class="inline-block mt-2 bg-green-100 text-green-800 text-xs font-bold px-3 py-1 rounded-full border border-green-300">
+                    STATUS: COMPLETED
+                </span>
+            </div>
+        </div>
+
+        <!-- Payer & Payee Info -->
+        <div class="grid grid-cols-2 gap-8 mb-8 relative z-10">
+            <div>
+                <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Paid By (Cardholder)</h2>
+                <p class="text-lg font-bold text-gray-800">{{ file.card_name }}</p>
+                <p class="text-sm text-gray-600 font-mono mt-1">Card: **** **** **** {{ file.card_number[-4:] }}</p>
+                <p class="text-sm text-gray-600">Type: {{ file.card_type }}</p>
+            </div>
+            <div class="text-right">
+                <h2 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Paid To (Server Wallet)</h2>
+                <p class="text-sm font-bold text-gray-800">USDT (TRC20)</p>
+                <p class="text-xs text-blue-600 font-mono break-all mt-1 bg-blue-50 p-1 rounded">{{ wallet }}</p>
+                <p class="text-sm text-gray-600 mt-2">Network: Tron Blockchain</p>
+            </div>
+        </div>
+
+        <!-- Invoice Table -->
+        <table class="w-full text-left mb-8 relative z-10">
+            <thead>
+                <tr class="bg-gray-100 text-gray-700 border-b border-gray-300">
+                    <th class="py-3 px-4 text-sm font-semibold">Description</th>
+                    <th class="py-3 px-4 text-sm font-semibold text-right">Amount (USDT)</th>
+                </tr>
+            </thead>
+            <tbody class="text-gray-700">
+                <tr class="border-b border-gray-200">
+                    <td class="py-4 px-4">
+                        <p class="font-semibold text-gray-900">MT103 File Download Fee</p>
+                        <p class="text-xs text-gray-500">Access to secure file: {{ file.filename }}</p>
+                    </td>
+                    <td class="py-4 px-4 text-right font-mono text-lg">${{ "{:,.2f}".format(file.download_fee) }}</td>
+                </tr>
+                <tr class="border-b border-gray-200">
+                    <td class="py-4 px-4">
+                        <p class="font-semibold text-gray-900">MT103 Conversion Processing</p>
+                        <p class="text-xs text-gray-500">MT101.1 to MT103 routing and authorization</p>
+                    </td>
+                    <td class="py-4 px-4 text-right font-mono text-lg">${{ "{:,.2f}".format(file.conversion_fee) }}</td>
+                </tr>
+            </tbody>
+            <tfoot>
+                <tr class="bg-gray-50">
+                    <td class="py-4 px-4 text-right font-bold text-gray-800 text-lg rounded-bl-lg">Total Paid:</td>
+                    <td class="py-4 px-4 text-right font-bold text-2xl text-green-600 font-mono rounded-br-lg">
+                        ${{ "{:,.2f}".format(file.download_fee + file.conversion_fee) }}
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+
+        <!-- Footer & Stamp -->
+        <div class="flex justify-between items-end border-t border-gray-200 pt-6 relative z-10">
+            <div class="text-xs text-gray-400 space-y-1">
+                <p>This document serves as an official receipt of payment.</p>
+                <p>Transaction Hash: <span class="text-blue-500 font-mono">0x{{ file.id }}f9c3a2e1b4d7f6a8e9b0c1d2e3f4a5b6c7d8e9f</span></p>
+                <p>Support: support@visaglobalserver.com</p>
+            </div>
+            <div class="text-center">
+                <div class="border-4 border-green-600 text-green-600 font-bold uppercase rounded-lg p-3 transform -rotate-12 opacity-80 text-xl shadow-sm">
+                    PAID
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="mt-8 text-center no-print border-t border-gray-200 pt-6 relative z-10">
+            <button onclick="window.print()" class="bg-[#1A1F71] hover:bg-blue-900 text-white font-bold py-3 px-8 rounded shadow-lg transition inline-flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                Print / Save PDF
+            </button>
+            <button onclick="window.close()" class="ml-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-3 px-8 rounded shadow-lg transition">
+                Close Window
+            </button>
+        </div>
+    </div>
+
+</body>
+</html>
