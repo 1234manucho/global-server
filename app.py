@@ -18,10 +18,11 @@ app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'default-secret-key')
 # ==========================================
 db_url = os.getenv('DATABASE_URL', 'postgresql://visa_yqla_user:DYguQGdSGspIDSeeQ5IrV6TjmOPkABd2@dpg-dba428fbtjjs73dn2tn0-a/visa_yqla')
 
+# FIX: Use 'postgresql+psycopg://' to force SQLAlchemy to use psycopg v3
 if db_url.startswith("postgres://"):
-    db_url = db_url.replace("postgres://", "postgresql+psycopg2://", 1)
+    db_url = db_url.replace("postgres://", "postgresql+psycopg://", 1)
 elif db_url.startswith("postgresql://"):
-    db_url = db_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+    db_url = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 
