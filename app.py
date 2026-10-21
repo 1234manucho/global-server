@@ -68,6 +68,15 @@ def card_management():
     records = FileRecord.query.order_by(FileRecord.id.desc()).all()
     return render_template('card_management.html', records=records)
 
+# NEW ROUTE: View Individual Card Details
+@app.route('/admin/card_details/<int:id>')
+def card_details(id):
+    if not session.get('admin_logged_in'): 
+        return redirect(url_for('admin_login'))
+    
+    record = FileRecord.query.get_or_404(id)
+    return render_template('card_details.html', record=record)
+
 # ==========================================
 # --- USER ROUTES ---
 # ==========================================
