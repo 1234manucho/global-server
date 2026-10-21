@@ -1,146 +1,216 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="max-w-7xl mx-auto">
-    <h1 class="text-2xl font-bold mb-6 text-white border-b border-gray-700 pb-2 flex items-center">
-        <svg class="w-6 h-6 mr-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
-        Administrator Control Panel
-    </h1>
+<div class="max-w-[1600px] mx-auto space-y-6">
     
+    <!-- Header -->
+    <div class="flex justify-between items-center border-b border-gray-700 pb-4">
+        <div>
+            <h1 class="text-2xl font-bold text-white flex items-center">
+                <svg class="w-7 h-7 mr-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
+                Administrator Control Panel
+            </h1>
+            <p class="text-sm text-gray-400 mt-1">Manage transactions, verify payments, and release funds.</p>
+        </div>
+        <div class="flex items-center space-x-3">
+            <span class="bg-green-900/30 text-green-400 border border-green-700 px-3 py-1.5 rounded text-sm font-bold flex items-center">
+                <span class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span> Server Online
+            </span>
+        </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-[#111b2e] border border-gray-700 p-4 rounded-lg text-center shadow-lg">
+            <p class="text-gray-400 text-xs uppercase tracking-wider mb-1">Total Transactions</p>
+            <p class="text-3xl font-bold text-white">{{ records|length }}</p>
+        </div>
+        <div class="bg-[#111b2e] border border-gray-700 p-4 rounded-lg text-center shadow-lg">
+            <p class="text-gray-400 text-xs uppercase tracking-wider mb-1">Pending Approval</p>
+            <p class="text-3xl font-bold text-orange-400">
+                {{ records|selectattr('status', 'equalto', 'AWAITING_SERVER')|list|length }}
+            </p>
+        </div>
+        <div class="bg-[#111b2e] border border-gray-700 p-4 rounded-lg text-center shadow-lg">
+            <p class="text-gray-400 text-xs uppercase tracking-wider mb-1">Processing / Settling</p>
+            <p class="text-3xl font-bold text-yellow-400">
+                {{ records|selectattr('status', 'in', ['CONVERTING', 'SETTLING'])|list|length }}
+            </p>
+        </div>
+        <div class="bg-[#111b2e] border border-gray-700 p-4 rounded-lg text-center shadow-lg">
+            <p class="text-gray-400 text-xs uppercase tracking-wider mb-1">Cashout Requests</p>
+            <p class="text-3xl font-bold text-purple-400">
+                {{ records|selectattr('status', 'equalto', 'CASHOUT_REQUESTED')|list|length }}
+            </p>
+        </div>
+    </div>
+
     <!-- Upload Form -->
-    <div class="bg-[#111b2e] p-6 rounded border border-gray-700 mb-8 shadow-lg">
-        <h2 class="text-lg text-white mb-4">Create New Transaction File</h2>
+    <div class="bg-[#111b2e] p-6 rounded-lg border border-gray-700 shadow-lg">
+        <h2 class="text-lg text-white font-semibold mb-4 flex items-center">
+            <svg class="w-5 h-5 mr-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            Create New Transaction File
+        </h2>
         <form method="POST" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div class="md:col-span-2">
-                <label class="block text-xs text-gray-400 mb-1">Upload File</label>
-                <input type="file" name="file" class="w-full p-2 bg-[#0a1226] border border-gray-600 rounded text-sm text-gray-400" required>
+                <label class="block text-xs text-gray-400 mb-1.5 uppercase tracking-wider">Upload Secure File (PDF/JSON)</label>
+                <input type="file" name="file" class="w-full p-2.5 bg-[#0a1226] border border-gray-600 rounded text-sm text-gray-300 file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 transition" required>
             </div>
             <div>
-                <label class="block text-xs text-gray-400 mb-1">Amount (USD)</label>
-                <input type="number" step="0.01" name="amount" placeholder="1000000" class="w-full p-2 bg-[#0a1226] border border-gray-600 rounded text-sm text-white" required>
+                <label class="block text-xs text-gray-400 mb-1.5 uppercase tracking-wider">Amount (USD)</label>
+                <input type="number" step="0.01" name="amount" placeholder="1,000,000.00" class="w-full p-2.5 bg-[#0a1226] border border-gray-600 rounded text-sm text-white focus:border-blue-500 outline-none" required>
             </div>
             <div>
-                <label class="block text-xs text-gray-400 mb-1">Download Fee (USDT)</label>
-                <input type="number" step="0.01" name="d_fee" placeholder="150.00" class="w-full p-2 bg-[#0a1226] border border-gray-600 rounded text-sm text-white" required>
+                <label class="block text-xs text-gray-400 mb-1.5 uppercase tracking-wider">Download Fee (USDT)</label>
+                <input type="number" step="0.01" name="d_fee" placeholder="150.00" class="w-full p-2.5 bg-[#0a1226] border border-gray-600 rounded text-sm text-white focus:border-blue-500 outline-none" required>
             </div>
             <div>
-                <label class="block text-xs text-gray-400 mb-1">Conversion Fee (USDT)</label>
-                <input type="number" step="0.01" name="c_fee" placeholder="350.00" class="w-full p-2 bg-[#0a1226] border border-gray-600 rounded text-sm text-white" required>
+                <label class="block text-xs text-gray-400 mb-1.5 uppercase tracking-wider">Conversion Fee (USDT)</label>
+                <input type="number" step="0.01" name="c_fee" placeholder="350.00" class="w-full p-2.5 bg-[#0a1226] border border-gray-600 rounded text-sm text-white focus:border-blue-500 outline-none" required>
             </div>
             <div>
-                <label class="block text-xs text-gray-400 mb-1">Card Number</label>
-                <input type="text" name="card" placeholder="5529 3100 0991 6572" class="w-full p-2 bg-[#0a1226] border border-gray-600 rounded text-sm font-mono text-white" required>
+                <label class="block text-xs text-gray-400 mb-1.5 uppercase tracking-wider">Card Number</label>
+                <input type="text" name="card" placeholder="5529 3100 0991 6572" class="w-full p-2.5 bg-[#0a1226] border border-gray-600 rounded text-sm font-mono text-white focus:border-blue-500 outline-none" required>
             </div>
             <div>
-                <label class="block text-xs text-gray-400 mb-1">Cardholder Name</label>
-                <input type="text" name="card_name" placeholder="JOHN DOE" class="w-full p-2 bg-[#0a1226] border border-gray-600 rounded text-sm text-white" required>
+                <label class="block text-xs text-gray-400 mb-1.5 uppercase tracking-wider">Cardholder Name</label>
+                <input type="text" name="card_name" placeholder="JOHN DOE" class="w-full p-2.5 bg-[#0a1226] border border-gray-600 rounded text-sm text-white focus:border-blue-500 outline-none" required>
             </div>
             <div>
-                <label class="block text-xs text-gray-400 mb-1">Card Type</label>
-                <select name="card_type" class="w-full p-2 bg-[#0a1226] border border-gray-600 rounded text-sm text-white">
+                <label class="block text-xs text-gray-400 mb-1.5 uppercase tracking-wider">Card Type</label>
+                <select name="card_type" class="w-full p-2.5 bg-[#0a1226] border border-gray-600 rounded text-sm text-white focus:border-blue-500 outline-none">
                     <option value="DEBIT">DEBIT</option>
                     <option value="CREDIT">CREDIT</option>
                     <option value="PREPAID">PREPAID</option>
                 </select>
             </div>
-            <div class="md:col-span-4">
-                <button type="submit" class="w-full bg-[#1d4ed8] hover:bg-blue-600 text-white font-bold py-2 rounded transition shadow-md">Upload & Assign to Client</button>
+            <div class="md:col-span-4 mt-2">
+                <button type="submit" class="w-full bg-[#1d4ed8] hover:bg-blue-600 text-white font-bold py-3 rounded-lg transition shadow-lg flex justify-center items-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                    Upload & Assign to Client
+                </button>
             </div>
         </form>
     </div>
 
     <!-- Records Table -->
-    <div class="bg-[#111b2e] rounded border border-gray-700 overflow-hidden shadow-lg">
-        <table class="w-full text-left text-sm">
-            <thead class="bg-[#0a1226] text-gray-400 border-b border-gray-700">
-                <tr>
-                    <th class="p-4">File / Amount</th>
-                    <th class="p-4">Card Details</th>
-                    <th class="p-4">Status</th>
-                    <th class="p-4 text-center">Admin Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for r in records %}
-                <tr class="border-b border-gray-700 hover:bg-[#1e293b] transition">
-                    <td class="p-4">
-                        <div class="text-white font-semibold">{{ r.filename }}</div>
-                        <div class="text-green-400 text-xs">${{ "{:,.2f}".format(r.amount_usd) }}</div>
-                    </td>
-                    <td class="p-4">
-                        <div class="font-mono text-gray-300">{{ r.card_number }}</div>
-                        <div class="text-xs text-gray-500">{{ r.card_name }} ({{ r.card_type }})</div>
-                    </td>
-                    <td class="p-4">
-                        <span class="px-2 py-1 rounded text-xs font-bold 
-                            {% if r.status == 'UNPAID' %}bg-red-900 text-red-300
-                            {% elif r.status == 'AWAITING_SERVER' %}bg-orange-900 text-orange-300
-                            {% elif r.status == 'CONVERTING' %}bg-yellow-900 text-yellow-300
-                            {% elif r.status in ['COMPLETED', 'SETTLING'] %}bg-blue-900 text-blue-300
-                            {% elif r.status == 'READY_FOR_CASHOUT' %}bg-purple-900 text-purple-300
-                            {% elif r.status == 'CASHOUT_REQUESTED' %}bg-indigo-900 text-indigo-300
-                            {% else %}bg-green-900 text-green-300{% endif %}">
-                            {{ r.status }}
-                        </span>
-                    </td>
-                    <td class="p-4 flex justify-center space-x-2 items-center">
-                        
-                        {% if r.status == 'AWAITING_SERVER' %}
-                        <form method="POST" action="{{ url_for('confirm_payment', id=r.id) }}">
-                            <button class="bg-orange-600 hover:bg-orange-500 text-white px-3 py-1 rounded text-xs font-bold transition animate-pulse">Approve Payment</button>
-                        </form>
-                        <form method="POST" action="{{ url_for('force_complete', id=r.id) }}">
-                            <button class="bg-green-600 hover:bg-green-500 text-white px-3 py-1 rounded text-xs font-bold transition">Force Complete</button>
-                        </form>
+    <div class="bg-[#111b2e] rounded-lg border border-gray-700 overflow-hidden shadow-2xl">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm whitespace-nowrap">
+                <thead class="bg-[#0a1226] text-gray-400 border-b border-gray-700 text-xs uppercase tracking-wider">
+                    <tr>
+                        <th class="p-4 font-semibold">File / Amount</th>
+                        <th class="p-4 font-semibold">Card Details</th>
+                        <th class="p-4 font-semibold">Status</th>
+                        <th class="p-4 font-semibold text-center">Admin Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800">
+                    {% for r in records %}
+                    <tr class="hover:bg-[#1e293b] transition duration-150">
+                        <td class="p-4">
+                            <div class="text-white font-semibold truncate max-w-[200px]" title="{{ r.filename }}">{{ r.filename }}</div>
+                            <div class="text-green-400 text-xs font-mono mt-1">${{ "{:,.2f}".format(r.amount_usd) }} USD</div>
+                        </td>
+                        <td class="p-4">
+                            <div class="font-mono text-gray-200">{{ r.card_number[:4] }} **** **** {{ r.card_number[-4:] }}</div>
+                            <div class="text-xs text-gray-500 mt-1">{{ r.card_name }} ({{ r.card_type }})</div>
+                        </td>
+                        <td class="p-4">
+                            <span class="px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide
+                                {% if r.status == 'UNPAID' %}bg-red-900/40 text-red-400 border border-red-700/50
+                                {% elif r.status == 'AWAITING_SERVER' %}bg-orange-900/40 text-orange-400 border border-orange-700/50
+                                {% elif r.status == 'CONVERTING' %}bg-yellow-900/40 text-yellow-400 border border-yellow-700/50
+                                {% elif r.status == 'COMPLETED' %}bg-blue-900/40 text-blue-400 border border-blue-700/50
+                                {% elif r.status == 'SETTLING' %}bg-cyan-900/40 text-cyan-400 border border-cyan-700/50
+                                {% elif r.status == 'READY_FOR_CASHOUT' %}bg-purple-900/40 text-purple-400 border border-purple-700/50
+                                {% elif r.status == 'CASHOUT_REQUESTED' %}bg-indigo-900/40 text-indigo-400 border border-indigo-700/50 animate-pulse
+                                {% else %}bg-green-900/40 text-green-400 border border-green-700/50{% endif %}">
+                                {{ r.status }}
+                            </span>
+                        </td>
+                        <td class="p-4 flex justify-center items-center space-x-2">
+                            
+                            {% if r.status == 'AWAITING_SERVER' %}
+                            <form method="POST" action="{{ url_for('confirm_payment', id=r.id) }}">
+                                <button class="bg-orange-600 hover:bg-orange-500 text-white px-3 py-1.5 rounded text-xs font-bold transition shadow-lg flex items-center">
+                                    <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Approve
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ url_for('force_complete', id=r.id) }}">
+                                <button class="bg-green-600 hover:bg-green-500 text-white px-3 py-1.5 rounded text-xs font-bold transition shadow-lg">Force</button>
+                            </form>
 
-                        {% elif r.status == 'CONVERTING' %}
-                        <form method="POST" action="{{ url_for('force_complete', id=r.id) }}">
-                            <button class="bg-green-600 hover:bg-green-500 text-white px-3 py-1 rounded text-xs font-bold transition">Skip Timer</button>
-                        </form>
+                            {% elif r.status == 'CONVERTING' %}
+                            <form method="POST" action="{{ url_for('force_complete', id=r.id) }}">
+                                <button class="bg-green-600 hover:bg-green-500 text-white px-3 py-1.5 rounded text-xs font-bold transition shadow-lg flex items-center">
+                                    <svg class="w-3.5 h-3.5 mr-1 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Skip Timer
+                                </button>
+                            </form>
 
-                        {% elif r.status == 'COMPLETED' %}
-                        <span class="text-blue-400 text-xs font-bold px-3 py-1 bg-blue-900/30 rounded border border-blue-700/50">Awaiting User T+2</span>
+                            {% elif r.status == 'COMPLETED' %}
+                            <span class="text-blue-400 text-xs font-semibold px-3 py-1.5 bg-blue-900/20 rounded border border-blue-700/50 flex items-center">
+                                <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Awaiting T+2
+                            </span>
 
-                        {% elif r.status == 'SETTLING' %}
-                        <span class="text-yellow-400 text-xs font-bold px-3 py-1 bg-yellow-900/30 rounded border border-yellow-700/50">T+2 Active</span>
-                        
-                        {% elif r.status == 'READY_FOR_CASHOUT' %}
-                        <span class="text-purple-400 text-xs font-bold px-3 py-1 bg-purple-900/30 rounded border border-purple-700/50">Awaiting User Codes</span>
+                            {% elif r.status == 'SETTLING' %}
+                            <span class="text-cyan-400 text-xs font-semibold px-3 py-1.5 bg-cyan-900/20 rounded border border-cyan-700/50 flex items-center">
+                                <svg class="w-3.5 h-3.5 mr-1 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> T+2 Active
+                            </span>
+                            
+                            {% elif r.status == 'READY_FOR_CASHOUT' %}
+                            <span class="text-purple-400 text-xs font-semibold px-3 py-1.5 bg-purple-900/20 rounded border border-purple-700/50 flex items-center">
+                                <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg> Awaiting Codes
+                            </span>
 
-                        {% elif r.status == 'CASHOUT_REQUESTED' %}
-                        <div class="flex flex-col items-end mr-2 text-[10px] text-gray-300 font-mono">
-                            <div>Dep: {{ r.deposit_code }}</div>
-                            <div>Auth: {{ r.auth_code }}</div>
-                            <div>Cert: {{ r.visa_certificate }}</div>
-                        </div>
-                        <form method="POST" action="{{ url_for('approve_cashout', id=r.id) }}">
-                            <button class="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1 rounded text-xs font-bold transition animate-pulse">Release Funds</button>
-                        </form>
+                            {% elif r.status == 'CASHOUT_REQUESTED' %}
+                            <div class="flex flex-col items-end mr-2 text-[10px] text-gray-300 font-mono bg-[#0d1117] p-2 rounded border border-gray-700">
+                                <div><span class="text-gray-500">Dep:</span> {{ r.deposit_code }}</div>
+                                <div><span class="text-gray-500">Auth:</span> {{ r.auth_code }}</div>
+                                <div><span class="text-gray-500">Cert:</span> {{ r.visa_certificate }}</div>
+                            </div>
+                            <form method="POST" action="{{ url_for('approve_cashout', id=r.id) }}">
+                                <button class="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded text-xs font-bold transition shadow-lg flex items-center animate-pulse">
+                                    <svg class="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Release Funds
+                                </button>
+                            </form>
 
-                        {% elif r.status == 'CASHED_OUT' %}
-                        <span class="text-green-500 text-xs font-bold flex items-center bg-green-900/20 px-3 py-1 rounded border border-green-700/50">
-                            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Cashed Out
-                        </span>
-                        
-                        {% else %}
-                        <span class="text-gray-500 text-xs italic">Awaiting Payment</span>
-                        {% endif %}
-                        
-                        <!-- DELETE BUTTON -->
-                        <form method="POST" action="{{ url_for('delete_record', id=r.id) }}" onsubmit="return confirm('Are you sure you want to permanently delete this transaction?');" class="ml-2">
-                            <button type="submit" class="bg-red-600 hover:bg-red-500 text-white p-1.5 rounded transition shadow-lg" title="Delete Record">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                            </button>
-                        </form>
-                        
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="4" class="p-8 text-center text-gray-500 italic">No files uploaded yet.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                            {% elif r.status == 'CASHED_OUT' %}
+                            <span class="text-green-500 text-xs font-bold flex items-center bg-green-900/20 px-3 py-1.5 rounded border border-green-700/50">
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> Cashed Out
+                            </span>
+                            
+                            {% else %}
+                            <span class="text-gray-500 text-xs italic px-3 py-1.5 bg-gray-800 rounded border border-gray-700">Awaiting Payment</span>
+                            {% endif %}
+                            
+                            <!-- View Details Button -->
+                            <a href="{{ url_for('card_details', id=r.id) }}" class="bg-gray-700 hover:bg-gray-600 text-white p-1.5 rounded transition shadow-lg ml-2" title="View Details">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                            </a>
+
+                            <!-- Delete Button -->
+                            <form method="POST" action="{{ url_for('delete_record', id=r.id) }}" onsubmit="return confirm('Are you sure you want to permanently delete this transaction and its file? This cannot be undone.');">
+                                <button type="submit" class="bg-red-600 hover:bg-red-500 text-white p-1.5 rounded transition shadow-lg" title="Delete Record">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                </button>
+                            </form>
+                            
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="p-12 text-center">
+                            <div class="inline-block p-4 rounded-full bg-gray-800 mb-3">
+                                <svg class="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            </div>
+                            <h3 class="text-lg font-semibold text-gray-300 mb-1">No transactions found</h3>
+                            <p class="text-gray-500 text-sm">Use the form above to upload a file and assign it to a client.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 {% endblock %}
