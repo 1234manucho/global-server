@@ -284,7 +284,35 @@ def review_kyc(id):
         flash("KYC Rejected.", "error")
         
     db.session.commit()
-    return redirect(url_for('admin'))
+    return redirect(request.referrer or url_for('admin'))
+
+# NEW: Reset KYC route to allow the user to upload again
+@app.route('/admin/reset_kyc/<int:id>', methods=['POST'])
+def reset_kyc(id):
+    if not session.get('admin_logged_in'): return redirect(url_for('admin_login'))
+    record = FileRecord.query.get_or_404(id)
+    
+    # Reset KYC Status
+    record.kyc_status = "NONE"
+    record.kyc_rejection_reason = None
+    record.kyc_verified = False
+    
+    # Clear all KYC document paths
+    record.kyc_funds = None
+    record.kyc_purpose = None
+    record.kyc_id = None
+    record.kyc_contract = None
+    record.kyc_lottery = None
+    record.kyc_aml = None
+    record.kyc_poa = None
+    record.kyc_bank_corr = None
+    record.kyc_remittance = None
+    record.kyc_visa_agreement = None
+    record.kyc_visa_clearance = None
+    
+    db.session.commit()
+    flash(f"KYC reset for {record.card_name}. The user can now upload their own documents.", "success")
+    return redirect(request.referrer or url_for('admin'))
 
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
