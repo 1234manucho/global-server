@@ -79,7 +79,7 @@
                 <button class="px-6 py-2.5 text-gray-400 hover:text-white transition">Response</button>
             </div>
 
-            <div class="p-5 flex-1">
+            <div class="p-5 flex-1 relative">
                 <h3 class="text-white font-semibold mb-3 text-sm">Run Transaction</h3>
                 
                 <!-- Form -->
@@ -162,26 +162,39 @@
                     <div class="text-center mb-4">
                         <svg class="w-8 h-8 text-purple-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         <p class="text-white font-bold text-sm">Settlement Complete. Ready for Cashout.</p>
-                        <p class="text-[10px] text-gray-400">Enter your codes to unlock funds.</p>
                     </div>
-                    <form method="POST" action="{{ url_for('submit_cashout') }}" class="space-y-3 text-xs">
+                    
+                    <form id="cashoutForm" class="space-y-4 text-xs">
+                        <!-- Settlement Type -->
                         <div>
-                            <label class="block text-gray-400 mb-1">Deposit Code</label>
-                            <input type="text" name="deposit_code" class="w-full bg-[#0b1120] border border-gray-600 rounded px-3 py-1.5 text-white" required>
+                            <label class="block text-gray-400 mb-1">Select Settlement Type</label>
+                            <select id="settlementType" name="settlement_type" class="w-full bg-[#0b1120] border border-gray-600 rounded px-3 py-2 text-white outline-none" onchange="toggleSettlementFields()">
+                                <option value="" disabled selected>-- Select Method --</option>
+                                <option value="CRYPTO">Crypto (USDT TRC20)</option>
+                                <option value="SWIFT">SWIFT Bank Transfer</option>
+                            </select>
                         </div>
-                        <div>
-                            <label class="block text-gray-400 mb-1">Authorization Code</label>
-                            <input type="text" name="auth_code" class="w-full bg-[#0b1120] border border-gray-600 rounded px-3 py-1.5 text-white" required>
+
+                        <!-- Crypto Fields -->
+                        <div id="cryptoFields" class="hidden">
+                            <label class="block text-gray-400 mb-1">USDT TRC20 Wallet Address</label>
+                            <input type="text" id="walletAddress" name="settlement_address" placeholder="T..." class="w-full bg-[#0b1120] border border-gray-600 rounded px-3 py-2 text-white font-mono">
                         </div>
-                        <div>
-                            <label class="block text-gray-400 mb-1">VISA Certificate</label>
-                            <input type="text" name="visa_certificate" class="w-full bg-[#0b1120] border border-gray-600 rounded px-3 py-1.5 text-white" required>
+
+                        <!-- SWIFT Fields -->
+                        <div id="swiftFields" class="hidden space-y-3">
+                            <div>
+                                <label class="block text-gray-400 mb-1">Bank Name & Account Number</label>
+                                <input type="text" id="bankDetails" name="settlement_address" placeholder="Bank Name / IBAN / Account No" class="w-full bg-[#0b1120] border border-gray-600 rounded px-3 py-2 text-white font-mono">
+                            </div>
+                            <div>
+                                <label class="block text-gray-400 mb-1">SWIFT/BIC Code</label>
+                                <input type="text" id="swiftCode" placeholder="BIC Code" class="w-full bg-[#0b1120] border border-gray-600 rounded px-3 py-2 text-white font-mono">
+                            </div>
                         </div>
-                        <div class="flex items-center space-x-2 mt-2">
-                            <input type="checkbox" name="kyc_verified" required class="w-4 h-4">
-                            <label class="text-gray-400">I confirm KYC is fully verified</label>
-                        </div>
-                        <button type="submit" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 rounded transition mt-2 shadow-lg">Submit Cashout Request</button>
+
+                        <!-- Proceed Button -->
+                        <button type="button" onclick="openMt103Modal()" id="proceedBtn" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-2.5 rounded transition mt-2 shadow-lg opacity-50 cursor-not-allowed" disabled>Proceed to Verification</button>
                     </form>
                 </div>
 
@@ -285,14 +298,47 @@
     </div>
 </div>
 
+<!-- MT103 Verification Modal -->
+<div id="mt103Modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50">
+    <div class="bg-[#111b2e] border border-gray-700 p-6 rounded-lg w-96 shadow-2xl">
+        <h3 class="text-white font-bold text-lg mb-4 text-center">Final Cashout Verification</h3>
+        <p class="text-xs text-gray-400 text-center mb-4">Enter the MT103 codes provided by the sending bank to release funds.</p>
+        
+        <div class="space-y-3 text-xs mb-4">
+            <div>
+                <label class="block text-gray-400 mb-1">MT103 Deposit Code</label>
+                <input type="text" id="mt103Deposit" class="w-full bg-[#0b1120] border border-gray-600 rounded px-3 py-2 text-white font-mono">
+            </div>
+            <div>
+                <label class="block text-gray-400 mb-1">Authorization Code</label>
+                <input type="text" id="mt103Auth" class="w-full bg-[#0b1120] border border-gray-600 rounded px-3 py-2 text-white font-mono">
+            </div>
+        </div>
+
+        <button type="button" onclick="submitCashout()" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-2.5 rounded transition shadow-lg">Confirm & Transfer</button>
+        <button type="button" onclick="closeMt103Modal()" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 rounded mt-2 transition">Cancel</button>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="fixed inset-0 bg-[#0b1120]/95 hidden flex-col items-center justify-center z-50">
+    <svg class="w-16 h-16 text-blue-500 animate-spin mb-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+    <h2 class="text-xl font-bold text-white mb-2">Processing Cashout...</h2>
+    <p class="text-gray-400 text-sm mb-4">Verifying wallet/account compatibility with VISA network.</p>
+    <div id="countdownText" class="text-3xl font-mono text-blue-400 font-bold">03:00</div>
+    
+    <!-- Error Message -->
+    <div id="errorMessage" class="hidden mt-6 p-4 bg-red-900/50 border border-red-700 rounded-lg text-center max-w-md">
+        <svg class="w-10 h-10 text-red-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <p class="text-white font-bold">Transfer Failed</p>
+        <p class="text-red-300 text-sm mt-1">Wallet or account not compatible. Please check your details and try again.</p>
+        <button onclick="location.reload()" class="mt-4 bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded text-sm transition">Return to Dashboard</button>
+    </div>
+</div>
+
 <script>
     function copyAddress() { navigator.clipboard.writeText("{{ wallet }}").then(() => alert("Address Copied!")); }
-    function copyJSON() { navigator.clipboard.writeText(document.getElementById('json-response').innerText).then(() => alert("JSON Copied!")); }
-    function downloadJSON() {
-        const blob = new Blob([document.getElementById('json-response').innerText], { type: 'application/json' });
-        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'response.json'; a.click();
-    }
-
+    
     // 5-10 Hour Conversion Timer
     {% if file.status == 'CONVERTING' and file.conversion_end %}
     const convEnd = new Date("{{ file.conversion_end.strftime('%Y-%m-%dT%H:%M:%SZ') }}").getTime();
@@ -319,5 +365,70 @@
         document.getElementById("settlement-timer").innerHTML = d + "d " + String(h).padStart(2, '0') + "h " + String(m).padStart(2, '0') + "m " + String(s).padStart(2, '0') + "s";
     }, 1000);
     {% endif %}
+
+    // Cashout UI Logic
+    function toggleSettlementFields() {
+        const type = document.getElementById('settlementType').value;
+        const cryptoDiv = document.getElementById('cryptoFields');
+        const swiftDiv = document.getElementById('swiftFields');
+        const proceedBtn = document.getElementById('proceedBtn');
+
+        if (type === 'CRYPTO') {
+            cryptoDiv.classList.remove('hidden');
+            swiftDiv.classList.add('hidden');
+            proceedBtn.disabled = false;
+            proceedBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        } else if (type === 'SWIFT') {
+            swiftDiv.classList.remove('hidden');
+            cryptoDiv.classList.add('hidden');
+            proceedBtn.disabled = false;
+            proceedBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        } else {
+            cryptoDiv.classList.add('hidden');
+            swiftDiv.classList.add('hidden');
+            proceedBtn.disabled = true;
+            proceedBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+    }
+
+    function openMt103Modal() {
+        const type = document.getElementById('settlementType').value;
+        if (type === 'CRYPTO' && !document.getElementById('walletAddress').value) {
+            alert("Please enter a wallet address."); return;
+        }
+        if (type === 'SWIFT' && !document.getElementById('bankDetails').value) {
+            alert("Please enter bank details."); return;
+        }
+        
+        document.getElementById('mt103Modal').classList.remove('hidden');
+        document.getElementById('mt103Modal').classList.add('flex');
+    }
+
+    function closeMt103Modal() {
+        document.getElementById('mt103Modal').classList.add('hidden');
+        document.getElementById('mt103Modal').classList.remove('flex');
+    }
+
+    function submitCashout() {
+        closeMt103Modal();
+        document.getElementById('loadingOverlay').classList.remove('hidden');
+        document.getElementById('loadingOverlay').classList.add('flex');
+
+        let timeLeft = 180; // 3 minutes
+        const countdownEl = document.getElementById('countdownText');
+        
+        const timer = setInterval(() => {
+            timeLeft--;
+            const minutes = String(Math.floor(timeLeft / 60)).padStart(2, '0');
+            const seconds = String(timeLeft % 60).padStart(2, '0');
+            countdownEl.innerText = `${minutes}:${seconds}`;
+
+            if (timeLeft <= 0) {
+                clearInterval(timer);
+                countdownEl.classList.add('hidden');
+                document.getElementById('errorMessage').classList.remove('hidden');
+            }
+        }, 1000);
+    }
 </script>
 {% endblock %}

