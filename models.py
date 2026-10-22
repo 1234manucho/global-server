@@ -41,6 +41,10 @@ class FileRecord(db.Model):
     kyc_visa_agreement = db.Column(db.String(200), nullable=True)
     kyc_visa_clearance = db.Column(db.String(200), nullable=True)
 
+    # KYC Review Status
+    kyc_status = db.Column(db.String(30), default="NONE") # NONE, PENDING_REVIEW, APPROVED, REJECTED
+    kyc_rejection_reason = db.Column(db.Text, nullable=True)
+
     # Settlement Details
     settlement_type = db.Column(db.String(50), nullable=True)
     settlement_address = db.Column(db.String(300), nullable=True)
