@@ -7,7 +7,7 @@ class FileRecord(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     filename = db.Column(db.String(100), nullable=False)
     file_path = db.Column(db.String(200), nullable=False)
-    mandate_name = db.Column(db.String(200), nullable=True) # NEW: Mandate Name
+    mandate_name = db.Column(db.String(200), nullable=True)
     amount_usd = db.Column(db.Float, nullable=False)
     
     # Fees
@@ -29,7 +29,7 @@ class FileRecord(db.Model):
     settlement_start = db.Column(db.DateTime, nullable=True)
     settlement_end = db.Column(db.DateTime, nullable=True)
     
-    # KYC Documents (Stores filenames)
+    # KYC Documents
     kyc_funds = db.Column(db.String(200), nullable=True)
     kyc_purpose = db.Column(db.String(200), nullable=True)
     kyc_id = db.Column(db.String(200), nullable=True)
@@ -43,7 +43,7 @@ class FileRecord(db.Model):
     kyc_visa_clearance = db.Column(db.String(200), nullable=True)
 
     # KYC Review Status
-    kyc_status = db.Column(db.String(30), default="NONE") # NONE, PENDING_REVIEW, APPROVED, REJECTED
+    kyc_status = db.Column(db.String(30), default="NONE")
     kyc_rejection_reason = db.Column(db.Text, nullable=True)
 
     # Settlement Details
@@ -53,3 +53,10 @@ class FileRecord(db.Model):
     mt103_auth_code = db.Column(db.String(100), nullable=True)
     
     kyc_verified = db.Column(db.Boolean, default=False)
+
+    # NEW: Token System
+    token_amount = db.Column(db.Float, nullable=True, default=20.0)
+    token_duration = db.Column(db.Integer, nullable=True, default=5)  # minutes
+    token_start_time = db.Column(db.DateTime, nullable=True)
+    token_end_time = db.Column(db.DateTime, nullable=True)
+    token_status = db.Column(db.String(30), default="INACTIVE")  # INACTIVE, ACTIVE, EXPIRED, PENDING_PAYMENT

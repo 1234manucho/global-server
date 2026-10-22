@@ -2,7 +2,6 @@
 {% block content %}
 <div class="max-w-[1600px] mx-auto space-y-6">
     
-    <!-- Header -->
     <div class="flex justify-between items-center border-b border-gray-700 pb-4">
         <div>
             <h1 class="text-2xl font-bold text-white flex items-center">
@@ -17,7 +16,6 @@
         </div>
     </div>
 
-    <!-- Stats Row -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div class="bg-[#111b2e] border border-gray-700 p-4 rounded-lg text-center shadow-lg">
             <p class="text-gray-400 text-xs uppercase tracking-wider mb-1">Total Transactions</p>
@@ -28,8 +26,8 @@
             <p class="text-3xl font-bold text-yellow-400">{{ records|selectattr('kyc_status', 'equalto', 'PENDING_REVIEW')|list|length }}</p>
         </div>
         <div class="bg-[#111b2e] border border-gray-700 p-4 rounded-lg text-center shadow-lg">
-            <p class="text-gray-400 text-xs uppercase tracking-wider mb-1">Active Processing</p>
-            <p class="text-3xl font-bold text-blue-400">{{ records|selectattr('status', 'in', ['CONVERTING', 'SETTLING'])|list|length }}</p>
+            <p class="text-gray-400 text-xs uppercase tracking-wider mb-1">Expired Tokens</p>
+            <p class="text-3xl font-bold text-red-400">{{ records|selectattr('token_status', 'in', ['EXPIRED', 'PENDING_PAYMENT'])|list|length }}</p>
         </div>
         <div class="bg-[#111b2e] border border-gray-700 p-4 rounded-lg text-center shadow-lg">
             <p class="text-gray-400 text-xs uppercase tracking-wider mb-1">Cashout Requests</p>
@@ -38,7 +36,6 @@
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Create New Transaction Form -->
         <div class="bg-[#111b2e] p-6 rounded-lg border border-gray-700 shadow-lg">
             <h2 class="text-lg text-white font-semibold mb-4 flex items-center border-b border-gray-700 pb-2">
                 <svg class="w-5 h-5 mr-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
@@ -63,12 +60,17 @@
                     <div><label class="block text-xs text-gray-400 mb-1 uppercase">Card Type</label><select name="card_type" class="w-full p-2 bg-[#0a1226] border border-gray-600 rounded text-sm text-white"><option value="DEBIT">DEBIT</option><option value="CREDIT">CREDIT</option></select></div>
                     <div><label class="block text-xs text-gray-400 mb-1 uppercase">Download Fee</label><input type="number" step="0.01" name="d_fee" class="w-full p-2 bg-[#0a1226] border border-gray-600 rounded text-sm text-white" required></div>
                     <div><label class="block text-xs text-gray-400 mb-1 uppercase">Conversion Fee</label><input type="number" step="0.01" name="c_fee" class="w-full p-2 bg-[#0a1226] border border-gray-600 rounded text-sm text-white" required></div>
+                    
+                    <div class="col-span-2 border-t border-gray-700 pt-3 mt-2">
+                        <p class="text-xs text-yellow-400 uppercase mb-2 tracking-wider">Token System</p>
+                    </div>
+                    <div><label class="block text-xs text-gray-400 mb-1 uppercase">Token Amount (USD)</label><input type="number" step="0.01" name="token_amount" value="20" class="w-full p-2 bg-[#0a1226] border border-gray-600 rounded text-sm text-white" required></div>
+                    <div><label class="block text-xs text-gray-400 mb-1 uppercase">Token Duration (Min)</label><input type="number" name="token_duration" value="5" class="w-full p-2 bg-[#0a1226] border border-gray-600 rounded text-sm text-white" required></div>
                 </div>
                 <button type="submit" class="w-full bg-[#1d4ed8] hover:bg-blue-600 text-white font-bold py-2 rounded transition">Create Transaction</button>
             </form>
         </div>
 
-        <!-- Upload KYC on Behalf of User -->
         <div class="bg-[#111b2e] p-6 rounded-lg border border-gray-700 shadow-lg">
             <h2 class="text-lg text-white font-semibold mb-4 flex items-center border-b border-gray-700 pb-2">
                 <svg class="w-5 h-5 mr-2 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
@@ -97,7 +99,6 @@
         </div>
     </div>
 
-    <!-- Records Table -->
     <div class="bg-[#111b2e] rounded-lg border border-gray-700 overflow-hidden shadow-2xl">
         <div class="overflow-x-auto">
             <table class="w-full text-left text-sm whitespace-nowrap">
@@ -105,8 +106,9 @@
                     <tr>
                         <th class="p-4 font-semibold">Client / Card</th>
                         <th class="p-4 font-semibold">File / Mandate</th>
-                        <th class="p-4 font-semibold">Transaction Status</th>
-                        <th class="p-4 font-semibold text-center">KYC Status</th>
+                        <th class="p-4 font-semibold">Transaction</th>
+                        <th class="p-4 font-semibold text-center">KYC</th>
+                        <th class="p-4 font-semibold text-center">Token</th>
                         <th class="p-4 font-semibold text-center">Actions</th>
                     </tr>
                 </thead>
@@ -124,8 +126,8 @@
                             <div class="text-xs text-green-400 font-mono mt-1">${{ "{:,.2f}".format(r.amount_usd) }} USD</div>
                         </td>
                         <td class="p-4">
-                            <div class="text-white text-xs font-semibold truncate max-w-[200px]" title="{{ r.filename }}">{{ r.filename }}</div>
-                            <div class="text-gray-400 text-xs mt-1 truncate max-w-[200px]" title="{{ r.mandate_name }}">{{ r.mandate_name or 'No Mandate' }}</div>
+                            <div class="text-white text-xs font-semibold truncate max-w-[150px]" title="{{ r.filename }}">{{ r.filename }}</div>
+                            <div class="text-gray-400 text-xs mt-1 truncate max-w-[150px]" title="{{ r.mandate_name }}">{{ r.mandate_name or 'No Mandate' }}</div>
                         </td>
                         <td class="p-4">
                             <span class="px-2 py-1 rounded text-[11px] font-bold
@@ -144,34 +146,48 @@
                             {% if r.kyc_status == 'NONE' %}
                             <span class="text-gray-500 text-xs italic">Not Uploaded</span>
                             {% elif r.kyc_status == 'PENDING_REVIEW' %}
-                            <button onclick="openKycModal({{ r.id }})" class="bg-yellow-600 hover:bg-yellow-500 text-white px-3 py-1 rounded text-xs font-bold animate-pulse">Review KYC</button>
+                            <button onclick="openKycModal({{ r.id }})" class="bg-yellow-600 hover:bg-yellow-500 text-white px-2 py-1 rounded text-[10px] font-bold animate-pulse">Review</button>
                             {% elif r.kyc_status == 'APPROVED' %}
-                            <span class="text-green-500 text-xs font-bold flex items-center justify-center"><svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Approved</span>
+                            <span class="text-green-500 text-xs font-bold">Approved</span>
                             {% elif r.kyc_status == 'REJECTED' %}
                             <span class="text-red-500 text-xs font-bold">Rejected</span>
                             {% endif %}
                         </td>
-                        <td class="p-4 flex justify-center items-center space-x-2">
+                        <td class="p-4 text-center">
+                            {% if r.token_status == 'INACTIVE' %}
+                            <form method="POST" action="{{ url_for('start_token', id=r.id) }}">
+                                <button class="bg-blue-600 hover:bg-blue-500 text-white px-2 py-1 rounded text-[10px] font-bold">Activate</button>
+                            </form>
+                            {% elif r.token_status == 'ACTIVE' %}
+                            <span class="text-green-500 text-xs font-bold flex items-center justify-center"><span class="w-1.5 h-1.5 bg-green-500 rounded-full mr-1 animate-pulse"></span> Active</span>
+                            <div class="text-[10px] text-gray-400 mt-0.5">${{ r.token_amount }}</div>
+                            {% elif r.token_status == 'EXPIRED' %}
+                            <span class="text-red-500 text-xs font-bold">Expired</span>
+                            <div class="text-[10px] text-gray-400 mt-0.5">Awaiting User</div>
+                            {% elif r.token_status == 'PENDING_PAYMENT' %}
+                            <form method="POST" action="{{ url_for('confirm_token_payment', id=r.id) }}">
+                                <button class="bg-orange-600 hover:bg-orange-500 text-white px-2 py-1 rounded text-[10px] font-bold animate-pulse">Confirm Pay</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                        <td class="p-4 flex justify-center items-center space-x-1">
                             {% if r.status == 'AWAITING_SERVER' %}
-                            <form method="POST" action="{{ url_for('confirm_payment', id=r.id) }}"><button class="bg-orange-600 hover:bg-orange-500 text-white px-3 py-1.5 rounded text-xs font-bold transition">Approve Pay</button></form>
+                            <form method="POST" action="{{ url_for('confirm_payment', id=r.id) }}"><button class="bg-orange-600 hover:bg-orange-500 text-white px-2 py-1 rounded text-[10px] font-bold">Approve</button></form>
                             {% elif r.status == 'CONVERTING' %}
-                            <form method="POST" action="{{ url_for('force_complete', id=r.id) }}"><button class="bg-green-600 hover:bg-green-500 text-white px-3 py-1.5 rounded text-xs font-bold transition">Skip Timer</button></form>
+                            <form method="POST" action="{{ url_for('force_complete', id=r.id) }}"><button class="bg-green-600 hover:bg-green-500 text-white px-2 py-1 rounded text-[10px] font-bold">Skip</button></form>
                             {% elif r.status == 'CASHOUT_REQUESTED' %}
-                            <form method="POST" action="{{ url_for('approve_cashout', id=r.id) }}"><button class="bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded text-xs font-bold transition animate-pulse">Release Funds</button></form>
+                            <form method="POST" action="{{ url_for('approve_cashout', id=r.id) }}"><button class="bg-purple-600 hover:bg-purple-500 text-white px-2 py-1 rounded text-[10px] font-bold animate-pulse">Release</button></form>
                             {% endif %}
                             
-                            <a href="{{ url_for('card_details', id=r.id) }}" class="bg-gray-700 hover:bg-gray-600 text-white p-1.5 rounded transition" title="View Details"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg></a>
+                            <a href="{{ url_for('card_details', id=r.id) }}" class="bg-gray-700 hover:bg-gray-600 text-white p-1.5 rounded transition" title="Details"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg></a>
                             
-                            <!-- Reset KYC Button -->
                             {% if r.kyc_status != 'NONE' %}
-                            <form method="POST" action="{{ url_for('reset_kyc', id=r.id) }}" onsubmit="return confirm('Are you sure you want to reset the KYC? This will delete the current document links and require the user to upload new ones.');">
-                                <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white p-1.5 rounded transition" title="Reset KYC">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                                </button>
+                            <form method="POST" action="{{ url_for('reset_kyc', id=r.id) }}" onsubmit="return confirm('Reset KYC?');">
+                                <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white p-1.5 rounded transition" title="Reset KYC"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg></button>
                             </form>
                             {% endif %}
                             
-                            <form method="POST" action="{{ url_for('delete_record', id=r.id) }}" onsubmit="return confirm('Delete permanently?');"><button type="submit" class="bg-red-600 hover:bg-red-500 text-white p-1.5 rounded transition"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button></form>
+                            <form method="POST" action="{{ url_for('delete_record', id=r.id) }}" onsubmit="return confirm('Delete permanently?');"><button type="submit" class="bg-red-600 hover:bg-red-500 text-white p-1.5 rounded transition"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button></form>
                         </td>
                     </tr>
                     {% endfor %}
@@ -185,35 +201,24 @@
 <div id="kycModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50">
     <div class="bg-[#111b2e] border border-gray-700 p-6 rounded-lg w-[600px] shadow-2xl max-h-[90vh] overflow-y-auto">
         <h3 class="text-white font-bold text-lg mb-4 text-center">Review KYC Documents</h3>
-        
-        <div id="kycDocsList" class="space-y-2 text-sm mb-6">
-            <!-- Documents injected via JS -->
-        </div>
-
+        <div id="kycDocsList" class="space-y-2 text-sm mb-6"></div>
         <form id="reviewForm" method="POST" class="space-y-4">
             <div class="flex space-x-2">
                 <button type="submit" name="action" value="approve" class="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-2.5 rounded transition">Approve KYC</button>
                 <button type="button" onclick="showRejectForm()" class="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-2.5 rounded transition">Reject KYC</button>
             </div>
-            
             <div id="rejectReasonDiv" class="hidden border-t border-gray-700 pt-4">
                 <label class="block text-xs text-gray-400 mb-2">Reason for Rejection</label>
                 <textarea name="reason" rows="3" class="w-full bg-[#0b1120] border border-red-600 rounded px-3 py-2 text-white text-sm mb-2" placeholder="Explain why the documents were rejected..."></textarea>
                 <button type="submit" name="action" value="reject" class="w-full bg-red-700 hover:bg-red-600 text-white font-bold py-2 rounded transition">Confirm Rejection</button>
             </div>
-            
             <button type="button" onclick="closeKycModal()" class="w-full bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 rounded transition">Cancel</button>
         </form>
     </div>
 </div>
 
 <script>
-    function copyCard(number) {
-        navigator.clipboard.writeText(number).then(() => {
-            alert("Card Number Copied: " + number);
-        });
-    }
-
+    function copyCard(number) { navigator.clipboard.writeText(number).then(() => alert("Card Number Copied: " + number)); }
     const recordsData = {
         {% for r in records %}
         "{{ r.id }}": {
@@ -224,51 +229,33 @@
         },
         {% endfor %}
     };
-
     function openKycModal(id) {
         const docs = recordsData[id];
         const list = document.getElementById('kycDocsList');
         list.innerHTML = '';
-        
         const docNames = {
             'kyc_funds': '1. Source of Funds', 'kyc_purpose': '2. Purpose of Payment', 'kyc_id': '3. Senders ID',
             'kyc_contract': '4. Contract & Invoice', 'kyc_lottery': '5. Lottery Certificate', 'kyc_aml': '6. AML Clearance',
             'kyc_poa': '7. Power of Attorney', 'kyc_bank_corr': '8. Bank Correspondence', 'kyc_remittance': '9. Remittance Advice',
             'kyc_visa_agreement': '10. Visa Agreement MT101.1', 'kyc_visa_clearance': '11. Visa Clearance'
         };
-
         for (const [key, label] of Object.entries(docNames)) {
             const file = docs[key];
             if (file) {
-                list.innerHTML += `
-                    <div class="flex justify-between items-center bg-[#0a1226] p-2 rounded border border-gray-700">
-                        <span class="text-gray-300">${label}</span>
-                        <a href="/static/../var/data/uploads/${file}" target="_blank" class="text-blue-400 hover:text-blue-300 text-xs font-bold">View File</a>
-                    </div>
-                `;
+                list.innerHTML += `<div class="flex justify-between items-center bg-[#0a1226] p-2 rounded border border-gray-700"><span class="text-gray-300">${label}</span><a href="/static/../var/data/uploads/${file}" target="_blank" class="text-blue-400 hover:text-blue-300 text-xs font-bold">View File</a></div>`;
             } else {
-                list.innerHTML += `
-                    <div class="flex justify-between items-center bg-[#0a1226] p-2 rounded border border-gray-700 opacity-50">
-                        <span class="text-gray-500">${label}</span>
-                        <span class="text-gray-500 text-xs">Not Provided</span>
-                    </div>
-                `;
+                list.innerHTML += `<div class="flex justify-between items-center bg-[#0a1226] p-2 rounded border border-gray-700 opacity-50"><span class="text-gray-500">${label}</span><span class="text-gray-500 text-xs">Not Provided</span></div>`;
             }
         }
-
         document.getElementById('reviewForm').action = `/admin/review_kyc/${id}`;
         document.getElementById('kycModal').classList.remove('hidden');
         document.getElementById('kycModal').classList.add('flex');
         document.getElementById('rejectReasonDiv').classList.add('hidden');
     }
-
     function closeKycModal() {
         document.getElementById('kycModal').classList.add('hidden');
         document.getElementById('kycModal').classList.remove('flex');
     }
-
-    function showRejectForm() {
-        document.getElementById('rejectReasonDiv').classList.remove('hidden');
-    }
+    function showRejectForm() { document.getElementById('rejectReasonDiv').classList.remove('hidden'); }
 </script>
 {% endblock %}

