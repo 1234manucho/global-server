@@ -48,8 +48,15 @@
                 <div class="grid grid-cols-2 gap-4">
                     <div class="col-span-2">
                         <label class="block text-xs text-gray-400 mb-1 uppercase">Main Transaction File</label>
-                        <input type="file" name="file" class="w-full p-2 bg-[#0a1226] border border-gray-600 rounded text-sm text-gray-300 file:bg-blue-600 file:text-white file:border-0 file:rounded file:px-3 file:py-1" required>
+                        <input type="file" name="file" id="mainFileInput" class="w-full p-2 bg-[#0a1226] border border-gray-600 rounded text-sm text-gray-300 file:bg-blue-600 file:text-white file:border-0 file:rounded file:px-3 file:py-1" onchange="document.getElementById('fileNameDisplay').innerText = 'Selected: ' + this.files[0].name" required>
+                        <p id="fileNameDisplay" class="text-xs text-blue-400 mt-1 font-mono">No file selected</p>
                     </div>
+                    
+                    <div class="col-span-2">
+                        <label class="block text-xs text-gray-400 mb-1 uppercase">Mandate Name</label>
+                        <input type="text" name="mandate_name" placeholder="e.g. MT103 Transfer Mandate - Client ABC" class="w-full p-2 bg-[#0a1226] border border-gray-600 rounded text-sm text-white" required>
+                    </div>
+
                     <div><label class="block text-xs text-gray-400 mb-1 uppercase">Amount (USD)</label><input type="number" step="0.01" name="amount" class="w-full p-2 bg-[#0a1226] border border-gray-600 rounded text-sm text-white" required></div>
                     <div><label class="block text-xs text-gray-400 mb-1 uppercase">Card Number</label><input type="text" name="card" class="w-full p-2 bg-[#0a1226] border border-gray-600 rounded text-sm text-white font-mono" required></div>
                     <div><label class="block text-xs text-gray-400 mb-1 uppercase">Cardholder Name</label><input type="text" name="card_name" class="w-full p-2 bg-[#0a1226] border border-gray-600 rounded text-sm text-white" required></div>
@@ -97,6 +104,7 @@
                 <thead class="bg-[#0a1226] text-gray-400 border-b border-gray-700 text-xs uppercase tracking-wider">
                     <tr>
                         <th class="p-4 font-semibold">Client / Card</th>
+                        <th class="p-4 font-semibold">File / Mandate</th>
                         <th class="p-4 font-semibold">Transaction Status</th>
                         <th class="p-4 font-semibold text-center">KYC Status</th>
                         <th class="p-4 font-semibold text-center">Actions</th>
@@ -114,6 +122,10 @@
                                 </button>
                             </div>
                             <div class="text-xs text-green-400 font-mono mt-1">${{ "{:,.2f}".format(r.amount_usd) }} USD</div>
+                        </td>
+                        <td class="p-4">
+                            <div class="text-white text-xs font-semibold truncate max-w-[200px]" title="{{ r.filename }}">{{ r.filename }}</div>
+                            <div class="text-gray-400 text-xs mt-1 truncate max-w-[200px]" title="{{ r.mandate_name }}">{{ r.mandate_name or 'No Mandate' }}</div>
                         </td>
                         <td class="p-4">
                             <span class="px-2 py-1 rounded text-[11px] font-bold
@@ -150,7 +162,7 @@
                             
                             <a href="{{ url_for('card_details', id=r.id) }}" class="bg-gray-700 hover:bg-gray-600 text-white p-1.5 rounded transition" title="View Details"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg></a>
                             
-                            <!-- NEW: Reset KYC Button -->
+                            <!-- Reset KYC Button -->
                             {% if r.kyc_status != 'NONE' %}
                             <form method="POST" action="{{ url_for('reset_kyc', id=r.id) }}" onsubmit="return confirm('Are you sure you want to reset the KYC? This will delete the current document links and require the user to upload new ones.');">
                                 <button type="submit" class="bg-blue-600 hover:bg-blue-500 text-white p-1.5 rounded transition" title="Reset KYC">
@@ -202,7 +214,6 @@
         });
     }
 
-    // Store all records in a JS object for the modal
     const recordsData = {
         {% for r in records %}
         "{{ r.id }}": {

@@ -7,6 +7,7 @@ class FileRecord(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     filename = db.Column(db.String(100), nullable=False)
     file_path = db.Column(db.String(200), nullable=False)
+    mandate_name = db.Column(db.String(200), nullable=True) # NEW: Mandate Name
     amount_usd = db.Column(db.Float, nullable=False)
     
     # Fees

@@ -229,9 +229,15 @@ def admin():
 
             try:
                 new_record = FileRecord(
-                    filename=filename, file_path=filename, amount_usd=float(request.form['amount']),
-                    download_fee=float(request.form['d_fee']), conversion_fee=float(request.form['c_fee']),
-                    card_number=request.form['card'].replace(" ", ""), card_name=request.form['card_name'], card_type=request.form['card_type'],
+                    filename=filename, 
+                    file_path=filename, 
+                    mandate_name=request.form.get('mandate_name'), # NEW: Mandate Name
+                    amount_usd=float(request.form['amount']),
+                    download_fee=float(request.form['d_fee']), 
+                    conversion_fee=float(request.form['c_fee']),
+                    card_number=request.form['card'].replace(" ", ""), 
+                    card_name=request.form['card_name'], 
+                    card_type=request.form['card_type'],
                     kyc_status="PENDING_REVIEW" if has_kyc else "NONE",
                     **kyc_data
                 )
@@ -248,29 +254,24 @@ def admin():
 @app.route('/admin/upload_kyc_for_user', methods=['POST'])
 def admin_upload_kyc():
     if not session.get('admin_logged_in'): return redirect(url_for('admin_login'))
-    
     card_number = request.form.get('card_number').replace(" ", "")
     record = FileRecord.query.filter_by(card_number=card_number).order_by(FileRecord.id.desc()).first()
-    
     if record:
         kyc_data = save_kyc_files(request.files)
         for key, value in kyc_data.items():
             if value: setattr(record, key, value)
-        
         record.kyc_status = "PENDING_REVIEW"
         record.kyc_rejection_reason = None
         db.session.commit()
         flash(f"KYC Documents uploaded for {record.card_name}. Pending review.", "success")
     else:
         flash("Card number not found.", "error")
-        
     return redirect(url_for('admin'))
 
 @app.route('/admin/review_kyc/<int:id>', methods=['POST'])
 def review_kyc(id):
     if not session.get('admin_logged_in'): return redirect(url_for('admin_login'))
     record = FileRecord.query.get_or_404(id)
-    
     action = request.form.get('action')
     if action == 'approve':
         record.kyc_status = "APPROVED"
@@ -282,34 +283,20 @@ def review_kyc(id):
         record.kyc_verified = False
         record.kyc_rejection_reason = request.form.get('reason')
         flash("KYC Rejected.", "error")
-        
     db.session.commit()
     return redirect(request.referrer or url_for('admin'))
 
-# NEW: Reset KYC route to allow the user to upload again
 @app.route('/admin/reset_kyc/<int:id>', methods=['POST'])
 def reset_kyc(id):
     if not session.get('admin_logged_in'): return redirect(url_for('admin_login'))
     record = FileRecord.query.get_or_404(id)
-    
-    # Reset KYC Status
     record.kyc_status = "NONE"
     record.kyc_rejection_reason = None
     record.kyc_verified = False
-    
-    # Clear all KYC document paths
-    record.kyc_funds = None
-    record.kyc_purpose = None
-    record.kyc_id = None
-    record.kyc_contract = None
-    record.kyc_lottery = None
-    record.kyc_aml = None
-    record.kyc_poa = None
-    record.kyc_bank_corr = None
-    record.kyc_remittance = None
-    record.kyc_visa_agreement = None
-    record.kyc_visa_clearance = None
-    
+    record.kyc_funds = None; record.kyc_purpose = None; record.kyc_id = None
+    record.kyc_contract = None; record.kyc_lottery = None; record.kyc_aml = None
+    record.kyc_poa = None; record.kyc_bank_corr = None; record.kyc_remittance = None
+    record.kyc_visa_agreement = None; record.kyc_visa_clearance = None
     db.session.commit()
     flash(f"KYC reset for {record.card_name}. The user can now upload their own documents.", "success")
     return redirect(request.referrer or url_for('admin'))

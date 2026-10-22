@@ -18,6 +18,7 @@
                 <span class="text-gray-400">Card Holder</span> <span class="text-white text-right uppercase">{{ file.card_name }}</span>
                 <span class="text-gray-400">Card Type</span> <span class="text-white text-right uppercase">{{ file.card_type }}</span>
                 <span class="text-gray-400">Card Status</span> <span class="text-green-500 font-bold text-right uppercase">ACTIVE</span>
+                <span class="text-gray-400">Mandate Name</span> <span class="text-white text-right">{{ file.mandate_name or 'N/A' }}</span>
             </div>
         </div>
 
@@ -103,7 +104,7 @@
         </div>
         {% endif %}
 
-        <!-- KYC Upload Form (Hidden by default) -->
+        <!-- KYC Upload Form -->
         <div id="kycUploadForm" class="hidden mt-4 border-t border-gray-700 pt-4">
             <form method="POST" action="{{ url_for('user_upload_kyc') }}" enctype="multipart/form-data" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
                 <div><label class="block text-gray-400 mb-1">1. Source of Funds</label><input type="file" name="kyc_funds" class="w-full text-gray-400 file:bg-gray-700 file:text-white file:border-0 file:rounded file:px-2 file:py-1"></div>
