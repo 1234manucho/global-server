@@ -4,35 +4,35 @@
     
     <!-- TOKEN BANNER -->
     {% if file.token_status == 'ACTIVE' %}
-    <div class="bg-green-900/30 border-2 border-green-600 rounded-lg p-4 shadow-lg">
+    <div class="bg-green-900/30 border border-green-600 rounded-lg p-4 shadow-[0_0_15px_rgba(34,197,94,0.3)]">
         <div class="flex justify-between items-center">
             <div class="flex items-center">
                 <svg class="w-8 h-8 text-green-400 mr-3 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
                 <div>
                     <p class="text-green-400 font-bold text-sm uppercase tracking-wider">Access Token Active</p>
-                    <p class="text-white text-xs">Token Amount: ${{ file.token_amount }} | Duration: {{ file.token_duration }} min</p>
+                    <p class="text-white text-xs">Token Amount: ${{ file.token_amount or 20 }} | Duration: {{ file.token_duration or 5 }} min</p>
                 </div>
             </div>
             <div class="text-right">
-                <p class="text-xs text-gray-400 uppercase">Time Remaining</p>
-                <div id="token-countdown" class="text-3xl font-mono text-green-400 font-bold">--:--</div>
+                <p class="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Time Remaining</p>
+                <div id="token-countdown" class="text-2xl font-mono text-green-400 font-bold">--:--</div>
             </div>
         </div>
     </div>
     {% elif file.token_status == 'EXPIRED' %}
-    <div class="bg-red-900/40 border-2 border-red-600 rounded-lg p-4 shadow-2xl animate-pulse">
+    <div class="bg-red-900/40 border border-red-600 rounded-lg p-4 shadow-[0_0_15px_rgba(220,38,38,0.4)] animate-pulse">
         <div class="flex justify-between items-center">
             <div class="flex items-center">
                 <svg class="w-8 h-8 text-red-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 <div>
                     <p class="text-red-400 font-bold text-lg uppercase tracking-wider">Token Expired</p>
-                    <p class="text-white text-xs">Please pay ${{ file.token_amount }} to refresh your access token.</p>
+                    <p class="text-white text-xs">Please pay ${{ file.token_amount or 20 }} to refresh your access token.</p>
                 </div>
             </div>
             <form method="POST" action="{{ url_for('user_pay_token') }}">
-                <button type="submit" class="bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition flex items-center text-sm">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                    Pay ${{ file.token_amount }} to Refresh
+                <button type="submit" class="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-6 rounded-lg shadow-lg transition flex items-center text-sm">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    Pay ${{ file.token_amount or 20 }} to Refresh
                 </button>
             </form>
         </div>
@@ -45,7 +45,7 @@
         </div>
     </div>
     {% elif file.token_status == 'PENDING_PAYMENT' %}
-    <div class="bg-orange-900/40 border-2 border-orange-600 rounded-lg p-4 shadow-lg">
+    <div class="bg-orange-900/40 border border-orange-600 rounded-lg p-4 shadow-lg">
         <div class="flex items-center">
             <svg class="w-8 h-8 text-orange-400 mr-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
             <div>
@@ -56,7 +56,9 @@
     </div>
     {% endif %}
 
+    <!-- Top Info Cards -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Card Information -->
         <div class="bg-[#0a1226] border border-gray-700 rounded-sm p-4 shadow-lg">
             <div class="flex items-center space-x-3 mb-3 border-b border-gray-700 pb-2">
                 <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path></svg>
@@ -74,6 +76,7 @@
             </div>
         </div>
 
+        <!-- Account / Balance -->
         <div class="bg-[#0a1226] border border-gray-700 rounded-sm p-4 shadow-lg">
             <div class="flex items-center space-x-3 mb-3 border-b border-gray-700 pb-2">
                 <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"></path></svg>
@@ -104,6 +107,7 @@
             </div>
         </div>
 
+        <!-- System Status -->
         <div class="bg-[#0a1226] border border-gray-700 rounded-sm p-4 shadow-lg">
             <div class="flex items-center space-x-3 mb-3 border-b border-gray-700 pb-2">
                 <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
@@ -112,7 +116,11 @@
             <div class="grid grid-cols-2 gap-y-2 text-xs">
                 <span class="text-gray-400">Server Connection</span> <span class="text-green-500 font-bold text-right flex justify-end items-center"><span class="w-1.5 h-1.5 bg-green-500 rounded-full mr-2"></span>ONLINE</span>
                 <span class="text-gray-400">Database Status</span> <span class="text-green-500 font-bold text-right flex justify-end items-center"><span class="w-1.5 h-1.5 bg-green-500 rounded-full mr-2"></span>ONLINE</span>
-                <span class="text-gray-400">KYC Verification</span> <span class="{% if file.kyc_status == 'APPROVED' %}text-green-500{% elif file.kyc_status == 'REJECTED' %}text-red-500{% else %}text-yellow-500{% endif %} font-bold text-right uppercase">{{ 'VERIFIED' if file.kyc_status == 'APPROVED' else file.kyc_status.replace('_', ' ') }}</span>
+                <span class="text-gray-400">KYC Verification</span> 
+                <!-- FIX: Added 'or NONE' fallback -->
+                <span class="{% if (file.kyc_status or 'NONE') == 'APPROVED' %}text-green-500{% elif (file.kyc_status or 'NONE') == 'REJECTED' %}text-red-500{% else %}text-yellow-500{% endif %} font-bold text-right uppercase">
+                    {{ 'VERIFIED' if (file.kyc_status or 'NONE') == 'APPROVED' else (file.kyc_status or 'NONE').replace('_', ' ') }}
+                </span>
                 <span class="text-gray-400">Session</span> <span class="text-green-500 font-bold text-right flex justify-end items-center"><span class="w-1.5 h-1.5 bg-green-500 rounded-full mr-2"></span>ACTIVE</span>
             </div>
         </div>
@@ -125,23 +133,23 @@
             KYC Verification Status
         </h3>
         
-        {% if file.kyc_status == 'NONE' %}
+        {% if (file.kyc_status or 'NONE') == 'NONE' %}
         <div class="text-center py-4">
             <p class="text-gray-400 mb-4 text-sm">You have not uploaded your KYC documents yet. Please upload them to proceed with cashout.</p>
             <button onclick="document.getElementById('kycUploadForm').classList.toggle('hidden')" class="bg-yellow-600 hover:bg-yellow-500 text-white px-4 py-2 rounded text-sm transition">Upload KYC Documents</button>
         </div>
-        {% elif file.kyc_status == 'PENDING_REVIEW' %}
+        {% elif (file.kyc_status or 'NONE') == 'PENDING_REVIEW' %}
         <div class="bg-orange-900/20 border border-orange-700 p-4 rounded text-center">
             <svg class="w-8 h-8 text-orange-500 mx-auto mb-2 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             <p class="text-white font-bold text-sm">Documents Under Review</p>
             <p class="text-xs text-gray-400 mt-1">The compliance team is reviewing your documents.</p>
         </div>
-        {% elif file.kyc_status == 'APPROVED' %}
+        {% elif (file.kyc_status or 'NONE') == 'APPROVED' %}
         <div class="bg-green-900/20 border border-green-700 p-4 rounded text-center">
             <svg class="w-8 h-8 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
             <p class="text-white font-bold text-sm">KYC Verified Successfully</p>
         </div>
-        {% elif file.kyc_status == 'REJECTED' %}
+        {% elif (file.kyc_status or 'NONE') == 'REJECTED' %}
         <div class="bg-red-900/20 border border-red-700 p-4 rounded mb-4">
             <p class="text-white font-bold text-sm text-center mb-1">KYC Rejected</p>
             <p class="text-xs text-red-300 text-center mb-3">Reason: {{ file.kyc_rejection_reason }}</p>
@@ -239,7 +247,7 @@
                 </div>
                 {% elif file.status == 'READY_FOR_CASHOUT' %}
                 <div class="bg-purple-900/20 border border-purple-700 p-4 rounded mb-6">
-                    {% if file.kyc_status != 'APPROVED' %}
+                    {% if (file.kyc_status or 'NONE') != 'APPROVED' %}
                     <div class="bg-red-900/40 p-3 rounded mb-4 text-center border border-red-700"><p class="text-red-300 text-xs font-bold">KYC must be approved before cashout.</p></div>
                     {% else %}
                     <form id="cashoutForm" class="space-y-4 text-xs">
@@ -295,7 +303,7 @@
             <div class="p-4 overflow-auto text-xs font-mono leading-relaxed">
                 <pre class="text-gray-300">{
   <span class="text-green-400">"status"</span>: <span class="text-yellow-300">"success"</span>,
-  <span class="text-green-400">"token_status"</span>: <span class="text-yellow-300">"{{ file.token_status }}"</span>,
+  <span class="text-green-400">"token_status"</span>: <span class="text-yellow-300">"{{ file.token_status or 'INACTIVE' }}"</span>,
   <span class="text-green-400">"transaction"</span>: {
     <span class="text-green-400">"reference"</span>: <span class="text-yellow-300">"TRN-{{ file.id }}-VISA"</span>,
     <span class="text-green-400">"amount"</span>: <span class="text-yellow-300">"{{ file.amount_usd }}"</span>,
@@ -307,6 +315,7 @@
     </div>
 </div>
 
+<!-- Modals (MT103 & Loading) remain the same -->
 <div id="mt103Modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50">
     <div class="bg-[#111b2e] border border-gray-700 p-6 rounded-lg w-96 shadow-2xl">
         <h3 class="text-white font-bold text-lg mb-4 text-center">Final Cashout Verification</h3>

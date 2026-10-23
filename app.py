@@ -111,6 +111,28 @@ def dashboard():
         session.pop('user_card', None)
         return redirect(url_for('login'))
     
+    # --- SAFETY FIX FOR OLD RECORDS ---
+    # If old records have None for new fields, set them to defaults
+    updated = False
+    if record.kyc_status is None:
+        record.kyc_status = "NONE"
+        updated = True
+    if record.token_status is None:
+        record.token_status = "INACTIVE"
+        updated = True
+    if record.token_amount is None:
+        record.token_amount = 20.0
+        updated = True
+    if record.token_duration is None:
+        record.token_duration = 5
+        updated = True
+    if record.mandate_name is None:
+        record.mandate_name = "Not Provided"
+        updated = True
+    if updated:
+        db.session.commit()
+    # ----------------------------------
+
     if record.status == "CONVERTING" and record.conversion_end and datetime.utcnow() > record.conversion_end:
         record.status = "COMPLETED"
         db.session.commit()
@@ -317,7 +339,7 @@ def reset_kyc(id):
     flash(f"KYC reset for {record.card_name}. User can upload again.", "success")
     return redirect(request.referrer or url_for('admin'))
 
-# --- NEW: MANDATE & TOKEN MANAGEMENT ROUTES ---
+# --- MANDATE & TOKEN MANAGEMENT ROUTES ---
 @app.route('/admin/update_mandate/<int:id>', methods=['POST'])
 def update_mandate(id):
     if not session.get('admin_logged_in'): return redirect(url_for('admin_login'))
@@ -333,7 +355,7 @@ def update_token(id):
     record = FileRecord.query.get_or_404(id)
     record.token_amount = float(request.form.get('token_amount', 20))
     record.token_duration = int(request.form.get('token_duration', 5))
-    record.token_status = "INACTIVE" # Reset to inactive so admin can activate it
+    record.token_status = "INACTIVE"
     db.session.commit()
     flash("Token configuration updated. Click 'Activate Token' to start.", "success")
     return redirect(request.referrer or url_for('admin'))
@@ -349,7 +371,6 @@ def reset_token(id):
     flash("Token has been force reset to INACTIVE.", "success")
     return redirect(request.referrer or url_for('admin'))
 
-# --- EXISTING TOKEN ROUTES ---
 @app.route('/admin/start_token/<int:id>', methods=['POST'])
 def start_token(id):
     if not session.get('admin_logged_in'): return redirect(url_for('admin_login'))
