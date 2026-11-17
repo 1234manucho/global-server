@@ -54,9 +54,13 @@ class FileRecord(db.Model):
     
     kyc_verified = db.Column(db.Boolean, default=False)
 
-    # NEW: Token System
+    # Token System
     token_amount = db.Column(db.Float, nullable=True, default=20.0)
-    token_duration = db.Column(db.Integer, nullable=True, default=5)  # minutes
+    token_duration = db.Column(db.Integer, nullable=True, default=5)
     token_start_time = db.Column(db.DateTime, nullable=True)
     token_end_time = db.Column(db.DateTime, nullable=True)
-    token_status = db.Column(db.String(30), default="INACTIVE")  # INACTIVE, ACTIVE, EXPIRED, PENDING_PAYMENT
+    token_status = db.Column(db.String(30), default="INACTIVE")
+
+    # NEW: Cashout authorization attempt tracking
+    cashout_attempts = db.Column(db.Integer, nullable=True, default=0)
+    is_cashout_blocked = db.Column(db.Boolean, nullable=True, default=False)

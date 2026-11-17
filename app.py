@@ -36,6 +36,15 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 with app.app_context():
     db.create_all()
+    # Auto-migrate new cashout columns if missing (safe / idempotent)
+    try:
+        from sqlalchemy import text
+        with db.engine.connect() as conn:
+            conn.execute(text("ALTER TABLE file_record ADD COLUMN IF NOT EXISTS cashout_attempts INTEGER DEFAULT 0"))
+            conn.execute(text("ALTER TABLE file_record ADD COLUMN IF NOT EXISTS is_cashout_blocked BOOLEAN DEFAULT FALSE"))
+            conn.commit()
+    except Exception as e:
+        print(f"[schema check] {e}")
 
 # Helper function to save KYC files
 def save_kyc_files(request_files):
@@ -128,6 +137,12 @@ def dashboard():
     if record.mandate_name is None:
         record.mandate_name = "Not Provided"
         updated = True
+    if record.cashout_attempts is None:
+        record.cashout_attempts = 0
+        updated = True
+    if record.is_cashout_blocked is None:
+        record.is_cashout_blocked = False
+        updated = True
     if updated:
         db.session.commit()
 
@@ -193,24 +208,90 @@ def initiate_settlement():
         flash("T+2 Settlement Phase Initiated. Please wait 48 hours.", "success")
     return redirect(url_for('dashboard'))
 
+# ==========================================
+# --- CASHOUT SUBMISSION (with 4510 auth check + 4-attempt lock) ---
+# ==========================================
+AUTH_CODE = "4510"
+MAX_ATTEMPTS = 4
+
 @app.route('/submit_cashout', methods=['POST'])
 def submit_cashout():
-    if 'user_card' not in session: return jsonify({"status": "error", "message": "Session expired."})
+    if 'user_card' not in session:
+        return jsonify({"status": "error", "message": "Session expired. Please log in again."})
+
     record = FileRecord.query.filter_by(card_number=session['user_card']).order_by(FileRecord.id.desc()).first()
-    
+    if not record:
+        return jsonify({"status": "error", "message": "Record not found."})
+
+    # Already blocked
+    if record.is_cashout_blocked:
+        return jsonify({
+            "status": "error",
+            "message": "Cashout is BLOCKED for this card due to too many failed authorization attempts. Please contact support to unblock.",
+            "blocked": True,
+            "attempts": record.cashout_attempts or 0,
+            "remaining": 0
+        })
+
     if record.kyc_status != 'APPROVED':
         return jsonify({"status": "error", "message": "KYC Verification is pending or rejected. You cannot cash out yet."})
 
-    if record.status == "READY_FOR_CASHOUT":
-        record.settlement_type = request.form.get('settlement_type')
-        record.settlement_address = request.form.get('settlement_address')
-        record.mt103_deposit_code = request.form.get('mt103_deposit_code')
-        record.mt103_auth_code = request.form.get('mt103_auth_code')
-        record.status = "CASHOUT_REQUESTED"
+    if record.status != "READY_FOR_CASHOUT":
+        return jsonify({"status": "error", "message": "Invalid transaction state."})
+
+    settlement_type = (request.form.get('settlement_type') or '').strip()
+    settlement_address = (request.form.get('settlement_address') or '').strip()
+    deposit_code = (request.form.get('mt103_deposit_code') or '').strip()
+    auth_code = (request.form.get('mt103_auth_code') or '').strip()
+
+    if not settlement_type or not settlement_address:
+        return jsonify({"status": "error", "message": "Please provide your settlement method and destination."})
+
+    if not deposit_code or not auth_code:
+        return jsonify({"status": "error", "message": "Please enter both the MT103 Deposit Code and Authorization Code."})
+
+    # --- Validate Authorization Code ---
+    if auth_code != AUTH_CODE:
+        record.cashout_attempts = (record.cashout_attempts or 0) + 1
+        remaining = max(0, MAX_ATTEMPTS - record.cashout_attempts)
+
+        if record.cashout_attempts >= MAX_ATTEMPTS:
+            record.is_cashout_blocked = True
+            db.session.commit()
+            return jsonify({
+                "status": "error",
+                "message": f"Maximum attempts reached ({MAX_ATTEMPTS}/{MAX_ATTEMPTS}). Cashout is now BLOCKED for this card. Please contact support.",
+                "blocked": True,
+                "attempts": record.cashout_attempts,
+                "remaining": 0
+            })
+
         db.session.commit()
-        return jsonify({"status": "error", "message": "Wallet or account not compatible. Please check your details and try again."})
-    
-    return jsonify({"status": "error", "message": "Invalid transaction state."})
+        return jsonify({
+            "status": "error",
+            "message": f"Incorrect Authorization Code. You have {remaining} attempt(s) remaining before this card is blocked.",
+            "blocked": False,
+            "attempts": record.cashout_attempts,
+            "remaining": remaining
+        })
+
+    # --- Success ---
+    record.settlement_type = settlement_type
+    record.settlement_address = settlement_address
+    record.mt103_deposit_code = deposit_code
+    record.mt103_auth_code = auth_code
+    record.status = "CASHOUT_REQUESTED"
+    record.cashout_attempts = 0   # reset on success
+    record.is_cashout_blocked = False
+    db.session.commit()
+
+    return jsonify({
+        "status": "success",
+        "message": "Cashout request submitted successfully. Awaiting admin release.",
+        "attempts": 0,
+        "remaining": MAX_ATTEMPTS,
+        "blocked": False
+    })
 
 @app.route('/receipt')
 def receipt():
@@ -275,6 +356,8 @@ def admin():
                     token_amount=float(request.form.get('token_amount', 20)),
                     token_duration=int(request.form.get('token_duration', 5)),
                     token_status="INACTIVE",
+                    cashout_attempts=0,
+                    is_cashout_blocked=False,
                     **kyc_data
                 )
                 db.session.add(new_record)
@@ -426,9 +509,7 @@ def force_complete(id):
     flash("Conversion marked as COMPLETED successfully.", "success")
     return redirect(url_for('admin'))
 
-# ==========================================
-# --- NEW: FORCE SETTLEMENT (Skip T+2) ---
-# ==========================================
+# --- FORCE SETTLEMENT (Skip T+2) ---
 @app.route('/admin/force_settlement/<int:id>', methods=['POST'])
 def force_settlement(id):
     if not session.get('admin_logged_in'): return redirect(url_for('admin_login'))
@@ -443,6 +524,17 @@ def force_settlement(id):
     else:
         flash("This transaction is not in the settlement phase.", "error")
     return redirect(url_for('admin'))
+
+# --- UNBLOCK CASHOUT (reset attempts after failed auth codes) ---
+@app.route('/admin/unblock_cashout/<int:id>', methods=['POST'])
+def unblock_cashout(id):
+    if not session.get('admin_logged_in'): return redirect(url_for('admin_login'))
+    record = FileRecord.query.get_or_404(id)
+    record.cashout_attempts = 0
+    record.is_cashout_blocked = False
+    db.session.commit()
+    flash(f"Cashout unblocked for {record.card_name}. Attempts reset to 0.", "success")
+    return redirect(request.referrer or url_for('admin'))
 
 @app.route('/admin/approve_cashout/<int:id>', methods=['POST'])
 def approve_cashout(id):
