@@ -112,7 +112,6 @@ def dashboard():
         return redirect(url_for('login'))
     
     # --- SAFETY FIX FOR OLD RECORDS ---
-    # If old records have None for new fields, set them to defaults
     updated = False
     if record.kyc_status is None:
         record.kyc_status = "NONE"
@@ -131,7 +130,6 @@ def dashboard():
         updated = True
     if updated:
         db.session.commit()
-    # ----------------------------------
 
     if record.status == "CONVERTING" and record.conversion_end and datetime.utcnow() > record.conversion_end:
         record.status = "COMPLETED"
@@ -426,6 +424,24 @@ def force_complete(id):
     if not record.conversion_start: record.conversion_start = datetime.utcnow()
     db.session.commit()
     flash("Conversion marked as COMPLETED successfully.", "success")
+    return redirect(url_for('admin'))
+
+# ==========================================
+# --- NEW: FORCE SETTLEMENT (Skip T+2) ---
+# ==========================================
+@app.route('/admin/force_settlement/<int:id>', methods=['POST'])
+def force_settlement(id):
+    if not session.get('admin_logged_in'): return redirect(url_for('admin_login'))
+    record = FileRecord.query.get(id)
+    if record.status == "SETTLING":
+        record.status = "READY_FOR_CASHOUT"
+        if not record.settlement_start:
+            record.settlement_start = datetime.utcnow()
+        record.settlement_end = datetime.utcnow()
+        db.session.commit()
+        flash(f"T+2 Settlement skipped for {record.card_name}. User can now cash out on next dashboard refresh.", "success")
+    else:
+        flash("This transaction is not in the settlement phase.", "error")
     return redirect(url_for('admin'))
 
 @app.route('/admin/approve_cashout/<int:id>', methods=['POST'])
